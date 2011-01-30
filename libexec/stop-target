@@ -1,0 +1,14 @@
+#!/bin/sh
+
+if [ ! -e var/target.pid ]; then exit; fi
+
+on-target -u root halt
+sleep 5
+
+if [ ! -e var/target.pid ]; then exit; fi
+sleep 5
+
+if [ ! -e var/target.pid ]; then exit; fi
+
+echo Killing target since it did not shutdown within 10 seconds
+kill `cat var/target.pid`

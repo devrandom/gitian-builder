@@ -1,0 +1,8 @@
+*-stamp
+*.substvars
+*.log
+*.pyc
+build
+var
+result
+inputs

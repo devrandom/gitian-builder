@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+
+SUITE=lucid
+ARCH=amd64
+
+if [ ! -e var/id_dsa ]; then
+  ssh-keygen -t dsa -f var/id_dsa -N ""
+fi
+sudo vmbuilder kvm ubuntu --arch=$ARCH --suite=$SUITE --addpkg=openssh-server,pciutils,build-essential,git-core,mercurial,subversion --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=http://localhost:3142/ubuntu --dest=base --flavour=virtual --overwrite
+mv base/*.qcow2 base.qcow2

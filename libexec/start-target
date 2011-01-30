@@ -1,0 +1,9 @@
+#!/bin/sh
+
+. gconfig
+
+kvm -m 2000 -smp 2 -drive file=target.qcow2 -net nic,model=virtio -net user,hostfwd=tcp::$VM_SSH_PORT-:22 -vnc :16 > var/target.log 2>&1 &
+
+echo $! > var/target.pid
+wait
+rm var/target.pid
