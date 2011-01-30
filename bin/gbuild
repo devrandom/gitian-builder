@@ -84,20 +84,20 @@ info ''
 
 system! "on-target true"
 
-info "Installing additional packages (log in var/install.log)"
-system! "on-target -u root apt-get -y install #{build_desc["packages"].join(" ")} > var/install.log 2>&1"
-
-info "Grabbing package manifest"
-system! "on-target -u root bash < target-bin/grab-packages.sh > var/base.manifest"
-
 info "Preparing build environment"
 system! "on-target bash < target-bin/init-build.sh"
 
 build_desc["files"].each do |filename|
   filename = sanitize(filename, "files section")
-  system! "cd inputs ; copy-to-target #{filename} build/"
-  in_sums << `cd inputs ; sha256sum #{filename}`
+  system! "cd inputs && copy-to-target #{filename} build/"
+  in_sums << `cd inputs && sha256sum #{filename}`
 end
+
+info "Installing additional packages (log in var/install.log)"
+system! "on-target -u root apt-get -y install #{build_desc["packages"].join(" ")} > var/install.log 2>&1"
+
+info "Grabbing package manifest"
+system! "on-target -u root bash < target-bin/grab-packages.sh > var/base.manifest"
 
 info "Creating build script (var/build-script)"
 
@@ -113,7 +113,7 @@ File.open("var/build-script", "w") do |script|
   script.puts
   build_desc["remotes"].each do |remote|
     script.puts "git clone -q #{remote["url"]} build/#{remote["dir"]}"
-    script.puts "(cd build/#{remote["dir"]} ; git checkout -q #{remote["commit"]})"
+    script.puts "(cd build/#{remote["dir"]} && git checkout -q #{remote["commit"]})"
   end
   script.puts "cd build"
   script.puts build_desc["script"]
@@ -132,7 +132,7 @@ info "Generating report"
 Dir.new(out_dir).each do |file|
   next if file.start_with?(".")
   file = sanitize(file, out_dir)
-  out_sums[file] = `cd #{out_dir} ; sha256sum #{file}`
+  out_sums[file] = `cd #{out_dir} && sha256sum #{file}`
   raise "failed to sum #{file}" unless $? == 0
   puts out_sums[file] unless @options[:quiet]
 end
@@ -155,6 +155,6 @@ File.open(File.join(result_dir, result_file), "w") do |io|
   io.write report.to_yaml
 end
 
-system!("cd #{result_dir} ; sha256sum #{result_file}") unless @options[:quiet]
+system!("cd #{result_dir} && sha256sum #{result_file}") unless @options[:quiet]
 
 info "Done."
