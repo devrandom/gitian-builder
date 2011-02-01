@@ -5,10 +5,63 @@ SUITE=lucid
 ARCH=amd64
 MIRROR=http://${MIRROR_HOST:-`hostname`}:3142/archive.ubuntu.com/ubuntu
 
+usage() {
+  echo "Usage: ${0##*/} [OPTION]... <command>"
+  echo "Make a base client."
+  echo
+  cat << EOF
+  --help     display this help and exit
+  --suite=U  build suite U instead of lucid
+  --arch=A   build architecture A (e.g. i386) instead of amd64
+
+  The MIRROR_HOST environment variable can be used to change the
+  apt-cacher host.  It should be something that the target VM can
+  resolve (not localhost).
+EOF
+}
+
+if [ $# != 0 ] ; then
+  while true ; do
+    case "$1" in
+      --help|-h)
+        usage
+        exit 0
+        ;;
+      --suite|-s)
+        SUITE="$2"
+        shift 2
+        ;;
+      --arch|-a)
+        ARCH="$2"
+        shift 2
+        ;;
+      --*)
+        echo "unrecognized option $1"
+        exit 1
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+fi
+
 mkdir -p var
 
 if [ ! -e var/id_dsa ]; then
   ssh-keygen -t dsa -f var/id_dsa -N ""
 fi
-sudo vmbuilder kvm ubuntu --arch=$ARCH --suite=$SUITE --addpkg=openssh-server,pciutils,build-essential,git-core,subversion --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=$MIRROR --dest=base --flavour=virtual --overwrite
-mv base/*.qcow2 base.qcow2
+
+OUT=base-$SUITE-$ARCH
+if [ -e $OUT.qcow2 ]; then
+  echo $OUT.qcow2 already exists, please remove it first
+  exit 1
+fi
+
+rm -rf $OUT
+
+sudo vmbuilder kvm ubuntu --arch=$ARCH --suite=$SUITE --addpkg=openssh-server,pciutils,build-essential,git-core,subversion --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=$MIRROR --dest=$OUT --flavour=virtual --overwrite
+
+mv $OUT/*.qcow2 $OUT.qcow2
+
+rm -rf $OUT

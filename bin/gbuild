@@ -7,6 +7,11 @@ require 'pathname'
 
 @options = {}
 
+@bitness = {
+  'i386' => 32,
+  'amd64' => 64,
+}
+
 def system!(cmd)
   system(cmd) or raise "failed to run #{cmd}"
 end
@@ -16,9 +21,84 @@ def sanitize(str, where)
   str
 end
 
+def sanitize_path(str, where)
+  raise "unsanitary string in #{where}" if (str =~ /[^\w\/.-]/)
+  str
+end
+
 def info(str)
   puts str unless @options[:quiet]
 end
+
+def build_one_configuration(suite, arch, build_desc, reference_datetime)
+  bits = @bitness[arch] or raise "unknown architecture ${arch}"
+  suitearch = "#{suite}-#{arch}"
+
+  info "Stopping target if it is up"
+  system "stop-target"
+
+  sleep 1
+
+  unless @options[:skip_image]
+    info "Making a new image copy"
+    system! "cp base-#{suitearch}.qcow2 target-#{suitearch}.qcow2"
+  end
+
+  info "Starting target"
+  system! "start-target #{bits} #{suitearch}&"
+
+  $stdout.write "Checking if target is up"
+
+  (1..10).each do
+    system "on-target true 2> /dev/null" and break
+    sleep 2
+    $stdout.write '.'
+  end
+
+  info ''
+
+  system! "on-target true"
+
+  info "Preparing build environment"
+  system! "on-target bash < target-bin/init-build.sh"
+
+  build_desc["files"].each do |filename|
+    filename = sanitize(filename, "files section")
+    system! "cd inputs && copy-to-target #{filename} build/"
+  end
+
+  info "Installing additional packages (log in var/install.log)"
+  system! "on-target -u root apt-get -y install #{build_desc["packages"].join(" ")} > var/install.log 2>&1"
+
+  info "Grabbing package manifest"
+  system! "on-target -u root bash < target-bin/grab-packages.sh > var/base-#{suitearch}.manifest"
+
+  info "Creating build script (var/build-script)"
+
+  File.open("var/build-script", "w") do |script|
+    script.puts "#!/bin/bash"
+    script.puts "set -e"
+    script.puts "export OUTDIR=$HOME/out"
+    script.puts "GBUILD_BITS=#{bits}"
+    script.puts "MAKEOPTS=(-j2)"
+    (ref_date, ref_time) = reference_datetime.split
+    script.puts "REFERENCE_DATETIME='#{reference_datetime}'"
+    script.puts "REFERENCE_DATE='#{ref_date}'"
+    script.puts "REFERENCE_TIME='#{ref_time}'"
+    script.puts
+    build_desc["remotes"].each do |remote|
+      script.puts "git clone -q #{remote["url"]} build/#{remote["dir"]}"
+      script.puts "(cd build/#{remote["dir"]} && git checkout -q #{remote["commit"]})"
+    end
+    script.puts "cd build"
+    script.puts build_desc["script"]
+  end
+
+  info "Running build script (log in var/build.log)"
+  system! "on-target bash < var/build-script > var/build.log 2>&1"
+end
+
+################################
 
 OptionParser.new do |opts|
   opts.banner = "Usage: build [options] <build-description>.yml"
@@ -39,18 +119,9 @@ ENV['GITIAN_BASE'] = base_dir.to_s
 
 build_desc_file = ARGV.shift or raise "must supply YAML build description file"
 
-in_sums = []
-
 build_desc = YAML.load_file(build_desc_file)
 
-package_name = build_desc["name"] or raise "must supply name"
-package_name = sanitize(package_name, "package name")
-
-desc_sum = `sha256sum #{build_desc_file}`
-desc_sum = desc_sum.sub(build_desc_file, "#{package_name}-desc.yml")
-in_sums << desc_sum
-
-reference_datetime = build_desc["reference_datetime"] or raise "must supply reference_datetime"
+in_sums = []
 
 build_dir = 'build'
 result_dir = 'result'
@@ -59,79 +130,49 @@ FileUtils.rm_rf(build_dir)
 FileUtils.mkdir(build_dir)
 FileUtils.mkdir_p(result_dir)
 
-info "Stopping target if it is up"
-system "stop-target"
+package_name = build_desc["name"] or raise "must supply name"
+package_name = sanitize(package_name, "package name")
 
-sleep 1
+suites = build_desc["suites"] or raise "must supply suites"
+archs = build_desc["architectures"] or raise "must supply architectures"
+reference_datetime = build_desc["reference_datetime"] or raise "must supply reference_datetime"
 
-unless @options[:skip_image]
-  info "Making a new image copy"
-  system! "cp base.qcow2 target.qcow2"
-end
-
-info "Starting target"
-system! "start-target &"
-
-$stdout.write "Checking if target is up"
-
-(1..10).each do
-  system "on-target true 2> /dev/null" and break
-  sleep 2
-  $stdout.write '.'
-end
-
-info ''
-
-system! "on-target true"
-
-info "Preparing build environment"
-system! "on-target bash < target-bin/init-build.sh"
+desc_sum = `sha256sum #{build_desc_file}`
+desc_sum = desc_sum.sub(build_desc_file, "#{package_name}-desc.yml")
+in_sums << desc_sum
 
 build_desc["files"].each do |filename|
   filename = sanitize(filename, "files section")
-  system! "cd inputs && copy-to-target #{filename} build/"
   in_sums << `cd inputs && sha256sum #{filename}`
 end
 
-info "Installing additional packages (log in var/install.log)"
-system! "on-target -u root apt-get -y install #{build_desc["packages"].join(" ")} > var/install.log 2>&1"
+base_manifests = YAML::Omap.new
 
-info "Grabbing package manifest"
-system! "on-target -u root bash < target-bin/grab-packages.sh > var/base.manifest"
+suites.each do |suite|
+  suite = sanitize(suite, "suite")
+  archs.each do |arch|
+    info "--- Building for #{suite} #{arch} ---"
+    arch = sanitize(arch, "architecture")
 
-info "Creating build script (var/build-script)"
+    # Build!
+    build_one_configuration(suite, arch, build_desc, reference_datetime)
 
-File.open("var/build-script", "w") do |script|
-  script.puts "#!/bin/bash"
-  script.puts "set -e"
-  script.puts "export OUTDIR=$HOME/out"
-  script.puts "MAKEOPTS=(-j2)"
-  (ref_date, ref_time) = reference_datetime.split
-  script.puts "REFERENCE_DATETIME='#{reference_datetime}'"
-  script.puts "REFERENCE_DATE='#{ref_date}'"
-  script.puts "REFERENCE_TIME='#{ref_time}'"
-  script.puts
-  build_desc["remotes"].each do |remote|
-    script.puts "git clone -q #{remote["url"]} build/#{remote["dir"]}"
-    script.puts "(cd build/#{remote["dir"]} && git checkout -q #{remote["commit"]})"
+    info "Grabbing results"
+    system! "copy-from-target out #{build_dir}"
+
+    base_manifest = File.read("var/base-#{suite}-#{arch}.manifest")
+    base_manifests["#{suite}-#{arch}"] = base_manifest
   end
-  script.puts "cd build"
-  script.puts build_desc["script"]
 end
-
-info "Running build script (log in var/build.log)"
-system! "on-target bash < var/build-script > var/build.log 2>&1"
-
-info "Grabbing results"
-system! "copy-from-target out #{build_dir}"
 
 out_dir = File.join(build_dir, "out")
 out_sums = {}
 
 info "Generating report"
-Dir.new(out_dir).each do |file|
-  next if file.start_with?(".")
-  file = sanitize(file, out_dir)
+Dir.glob(File.join(out_dir, '**', '*')).sort.each do |file_in_out|
+  next if File.directory?(file_in_out)
+  file = file_in_out.sub(out_dir + File::SEPARATOR, '')
+  file = sanitize_path(file, file_in_out)
   out_sums[file] = `cd #{out_dir} && sha256sum #{file}`
   raise "failed to sum #{file}" unless $? == 0
   puts out_sums[file] unless @options[:quiet]
@@ -139,15 +180,13 @@ end
 
 out_manifest = out_sums.keys.sort.map { |key| out_sums[key] }.join('')
 
-base_manifest = File.read('var/base.manifest')
-
 in_manifest = in_sums.join('')
 
 # Use Omap to keep result deterministic
 report = YAML::Omap[
   'out_manifest', out_manifest,
   'in_manifest', in_manifest,
-  'base_manifest', base_manifest,
+  'base_manifests', base_manifests,
 ]
 
 result_file = "#{package_name}-res.yml"

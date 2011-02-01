@@ -1,6 +1,6 @@
 #!/bin/sh
 
-rm -rf inst out build
+rm -rf install out build
 mkdir build
 mkdir out
-mkdir inst
+mkdir install
