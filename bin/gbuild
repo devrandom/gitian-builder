@@ -109,6 +109,9 @@ OptionParser.new do |opts|
   opts.on("-q", "--quiet", "be quiet") do |v|
     @options[:skip_image] = v
   end
+  opts.on("-c PAIRS", "--commit PAIRS", "comma separated list of DIRECTORY=COMMIT pairs") do |v|
+    @options[:commit] = v
+  end
 end.parse!
 
 base_dir = Pathname.new(__FILE__).expand_path.dirname.parent
@@ -144,6 +147,22 @@ in_sums << desc_sum
 build_desc["files"].each do |filename|
   filename = sanitize(filename, "files section")
   in_sums << `cd inputs && sha256sum #{filename}`
+end
+
+commits = {}
+
+if @options[:commit]
+  @options[:commit].split(',').each do |pair|
+    (dir, commit) = pair.split('=')
+    commits[dir] = commit
+  end
+end
+
+build_desc["remotes"].each do |remote|
+  if !remote["commit"]
+    remote["commit"] = commits[remote["dir"]]
+    raise "must specify a commit for directory #{remote["dir"]}" unless remote["commit"]
+  end
 end
 
 base_manifests = YAML::Omap.new

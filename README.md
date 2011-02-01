@@ -25,6 +25,10 @@ Then execute the build using a YAML description file (can be run as non-root):
 
     bin/gbuild <package>-desc.yml
 
+or if you need to specify a commit for one of the git remotes:
+
+    bin/gbuild --commit <dir>=<hash> <package>-desc.yml
+
 The resulting report will appear in result/\<package\>-res.yml
 
 ## Poking around

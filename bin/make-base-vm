@@ -4,6 +4,7 @@ set -e
 SUITE=lucid
 ARCH=amd64
 MIRROR=http://${MIRROR_HOST:-`hostname`}:3142/archive.ubuntu.com/ubuntu
+SECURITY_MIRROR=http://${MIRROR_HOST:-`hostname`}:3142/security.ubuntu.com/ubuntu
 
 usage() {
   echo "Usage: ${0##*/} [OPTION]... <command>"
@@ -60,7 +61,7 @@ fi
 
 rm -rf $OUT
 
-sudo vmbuilder kvm ubuntu --arch=$ARCH --suite=$SUITE --addpkg=openssh-server,pciutils,build-essential,git-core,subversion --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=$MIRROR --dest=$OUT --flavour=virtual --overwrite
+sudo vmbuilder kvm ubuntu --arch=$ARCH --suite=$SUITE --addpkg=openssh-server,pciutils,build-essential,git-core,subversion --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=$MIRROR --security-mirror=$SECURITY_MIRROR --dest=$OUT --flavour=virtual
 
 mv $OUT/*.qcow2 $OUT.qcow2
 
