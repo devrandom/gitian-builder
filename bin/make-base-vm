@@ -3,11 +3,11 @@ set -e
 
 SUITE=lucid
 ARCH=amd64
-MIRROR=http://${MIRROR_HOST:-`hostname`}:3142/archive.ubuntu.com/ubuntu
-SECURITY_MIRROR=http://${MIRROR_HOST:-`hostname`}:3142/security.ubuntu.com/ubuntu
+MIRROR=http://${MIRROR_HOST:-10.0.2.2}:3142/archive.ubuntu.com/ubuntu
+SECURITY_MIRROR=http://${MIRROR_HOST:-10.0.2.2}:3142/security.ubuntu.com/ubuntu
 
 usage() {
-  echo "Usage: ${0##*/} [OPTION]... <command>"
+  echo "Usage: ${0##*/} [OPTION]..."
   echo "Make a base client."
   echo
   cat << EOF
@@ -17,7 +17,8 @@ usage() {
 
   The MIRROR_HOST environment variable can be used to change the
   apt-cacher host.  It should be something that the target VM can
-  resolve (not localhost).
+  resolve (not localhost).  By default it is the IP address 10.0.2.2
+  which is the host IP as visible from the guest.
 EOF
 }
 

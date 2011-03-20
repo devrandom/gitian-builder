@@ -107,7 +107,7 @@ OptionParser.new do |opts|
     @options[:skip_image] = v
   end
   opts.on("-q", "--quiet", "be quiet") do |v|
-    @options[:skip_image] = v
+    @options[:quiet] = v
   end
   opts.on("-c PAIRS", "--commit PAIRS", "comma separated list of DIRECTORY=COMMIT pairs") do |v|
     @options[:commit] = v
