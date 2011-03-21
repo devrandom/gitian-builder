@@ -3,8 +3,8 @@ set -e
 
 SUITE=lucid
 ARCH=amd64
-MIRROR=http://${MIRROR_HOST:-10.0.2.2}:3142/archive.ubuntu.com/ubuntu
-SECURITY_MIRROR=http://${MIRROR_HOST:-10.0.2.2}:3142/security.ubuntu.com/ubuntu
+MIRROR=http://${MIRROR_HOST:-127.0.0.1}:3142/archive.ubuntu.com/ubuntu
+SECURITY_MIRROR=http://${MIRROR_HOST:-127.0.0.1}:3142/security.ubuntu.com/ubuntu
 
 usage() {
   echo "Usage: ${0##*/} [OPTION]..."
@@ -17,8 +17,9 @@ usage() {
 
   The MIRROR_HOST environment variable can be used to change the
   apt-cacher host.  It should be something that the target VM can
-  resolve (not localhost).  By default it is the IP address 10.0.2.2
-  which is the host IP as visible from the guest.
+  resolve.  It may be set to 127.0.0.1, in which case it will be
+  changed to 10.0.2.2 on the guest.  10.0.2.2 is the host IP as visible
+  from the guest under qemu networking.
 EOF
 }
 
@@ -62,7 +63,7 @@ fi
 
 rm -rf $OUT
 
-sudo vmbuilder kvm ubuntu --arch=$ARCH --suite=$SUITE --addpkg=openssh-server,pciutils,build-essential,git-core,subversion --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=$MIRROR --security-mirror=$SECURITY_MIRROR --dest=$OUT --flavour=virtual
+sudo vmbuilder kvm ubuntu --arch=$ARCH --suite=$SUITE --addpkg=openssh-server,pciutils,build-essential,git-core,subversion --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=$MIRROR --security-mirror=$SECURITY_MIRROR --dest=$OUT --flavour=virtual --firstboot=`pwd`/target-bin/bootstrap-fixup
 
 mv $OUT/*.qcow2 $OUT.qcow2
 
