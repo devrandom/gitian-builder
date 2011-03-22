@@ -5,7 +5,7 @@
 ARCH=qemu$1
 SUFFIX=$2
 
-kvm -cpu $ARCH -m 256 -smp 2 -drive file=target-$SUFFIX.qcow2 -net nic,model=virtio -net user,hostfwd=tcp::$VM_SSH_PORT-:22 -vnc :16 > var/target.log 2>&1 &
+kvm -cpu $ARCH -m 2000 -smp 2 -drive file=target-$SUFFIX.qcow2 -net nic,model=virtio -net user,hostfwd=tcp::$VM_SSH_PORT-:22 -vnc :16 > var/target.log 2>&1 &
 
 echo $! > var/target.pid
 wait

@@ -67,6 +67,9 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
     system! "cd inputs && copy-to-target #{filename} build/"
   end
 
+  info "Updating apt-get repository (log in var/install.log)"
+  system! "on-target -u root apt-get update > var/install.log 2>&1"
+
   info "Installing additional packages (log in var/install.log)"
   system! "on-target -u root apt-get -y install #{build_desc["packages"].join(" ")} > var/install.log 2>&1"
 

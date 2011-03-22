@@ -35,7 +35,7 @@ The resulting report will appear in result/\<package\>-res.yml
 
 * Log files are captured to the _var_ directory
 * You can run the utilities in libexec by running `PATH="libexec:$PATH"`
-* To start the target VM run `start-target`
+* To start the target VM run `start-target 32 lucid-i386` or `start-target 64 lucid-amd64`
 * To ssh into the target run `on-target` or `on-target -u root`
 * On the target, the _build_ directory contains the code as it is compiled and _install_ contains intermediate libraries
 * By convention, the script in \<package\>-desc.yml starts with any environment setup you would need to manually compile things on the target
