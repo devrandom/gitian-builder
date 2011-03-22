@@ -41,4 +41,4 @@ fi
 #  exit 1
 #fi
 
-ssh -oConnectTimeout=2 -i ${GITIAN_BASE:-.}/var/id_dsa -p $VM_SSH_PORT $TUSER@localhost $*
+ssh -oConnectTimeout=2 -oNoHostAuthenticationForLocalhost=yes -i ${GITIAN_BASE:-.}/var/id_dsa -p $VM_SSH_PORT $TUSER@localhost $*
