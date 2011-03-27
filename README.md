@@ -23,13 +23,23 @@ Copy any additional build inputs into a directory named _inputs_.
 
 Then execute the build using a YAML description file (can be run as non-root):
 
-    bin/gbuild <package>-desc.yml
+    bin/gbuild <package>.yml
 
 or if you need to specify a commit for one of the git remotes:
 
-    bin/gbuild --commit <dir>=<hash> <package>-desc.yml
+    bin/gbuild --commit <dir>=<hash> <package>.yml
 
 The resulting report will appear in result/\<package\>-res.yml
+
+To sign the result, perform:
+
+    bin/gsign --signer <signer> --release <release-name> <package>.yml
+
+Where <signer> is your signing PGP key ID and <release-name> is the name for the current release.  This will put the result and signature in the sigs/<package>/<release-name>.  The sigs/<package> directory can be managed through git to coordinate multiple signers.
+
+After you've merged everybody's signatures, verify them:
+
+    bin/gverify --release <release-name> <package>.yml
 
 ## Poking around
 
@@ -38,7 +48,7 @@ The resulting report will appear in result/\<package\>-res.yml
 * To start the target VM run `start-target 32 lucid-i386` or `start-target 64 lucid-amd64`
 * To ssh into the target run `on-target` or `on-target -u root`
 * On the target, the _build_ directory contains the code as it is compiled and _install_ contains intermediate libraries
-* By convention, the script in \<package\>-desc.yml starts with any environment setup you would need to manually compile things on the target
+* By convention, the script in \<package\>.yml starts with any environment setup you would need to manually compile things on the target
 
 TODO:
 - disable sudo in target, just in case of a hypervisor exploit

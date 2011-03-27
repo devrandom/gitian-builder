@@ -1,0 +1,92 @@
+#!/usr/bin/ruby
+
+require 'optparse'
+require 'yaml'
+require 'fileutils'
+require 'pathname'
+
+@options = {}
+
+def system!(cmd)
+  system(cmd) or raise "failed to run #{cmd}"
+end
+
+def sanitize(str, where)
+  raise "unsanitary string in #{where}" if (str =~ /[^\w.-]/)
+  str
+end
+
+def sanitize_path(str, where)
+  raise "unsanitary string in #{where}" if (str =~ /[^@\w\/.-]/)
+  str
+end
+
+def info(str)
+  puts str unless @options[:quiet]
+end
+
+################################
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: build [options] <build-description>.yml"
+
+  opts.on("-q", "--quiet", "be quiet") do |v|
+    @options[:quiet] = v
+  end
+  opts.on("-r REL", "--release REL", "release name") do |v|
+    @options[:release] = v
+  end
+
+  opts.on("-d DEST", "--destination DEST", "directory to place signature in") do |v|
+    @options[:destination] = v
+  end
+end.parse!
+
+base_dir = Pathname.new(__FILE__).expand_path.dirname.parent
+
+build_desc_file = ARGV.shift or raise "must supply YAML build description file"
+
+build_desc = YAML.load_file(build_desc_file)
+
+in_sums = []
+
+result_dir = 'result'
+
+package_name = build_desc["name"] or raise "must supply name"
+package_name = sanitize(package_name, "package name")
+
+destination = @options[:destination] || File.join(base_dir, "sigs", package_name)
+release = @options[:release] || "current"
+release = sanitize(release, "release")
+
+release_path = File.join(destination, release)
+
+File.exists?(release_path) or raise "#{release_path} does not exist"
+
+result_file = "#{package_name}-res.yml"
+
+#system!("gpg --detach-sign -u #{signer} -o #{release_path}/signature.pgp #{result_path}")
+
+current_manifest = nil
+
+did_fail = false
+
+Dir.foreach(release_path) do |signer_dir|
+  next if signer_dir == "." or signer_dir == ".."
+  signer_path = sanitize_path(File.join(release_path, signer_dir), "signer path")
+  next if !File.directory?(signer_path)
+  result_path = sanitize_path(File.join(signer_path, result_file), "result path")
+  result = YAML.load_file(result_path)
+  if !system("gpg --quiet --batch --verify #{File.join(signer_path, 'signature.pgp')} #{result_path}")
+    puts "#{signer_dir}: BAD SIGNATURE"
+    did_fail = true
+  elsif current_manifest and result['out_manifest'] != current_manifest
+    puts "#{signer_dir}: MISMATCH"
+    did_fail = true
+  else
+    puts "#{signer_dir}: OK"
+  end
+  current_manifest = result['out_manifest']
+end
+
+exit 1 if did_fail
