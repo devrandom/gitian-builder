@@ -17,7 +17,7 @@ def sanitize(str, where)
 end
 
 def sanitize_path(str, where)
-  raise "unsanitary string in #{where}" if (str =~ /[^@\w\/.-]/)
+  raise "unsanitary string in #{where}" if (str =~ /[^@\w\/. -]/)
   str
 end
 
@@ -77,7 +77,8 @@ Dir.foreach(release_path) do |signer_dir|
   next if !File.directory?(signer_path)
   result_path = sanitize_path(File.join(signer_path, result_file), "result path")
   result = YAML.load_file(result_path)
-  if !system("gpg --quiet --batch --verify #{File.join(signer_path, 'signature.pgp')} #{result_path}")
+  system("gpg --keyserver pgp.mit.edu --recv-keys `gpg --quiet --batch --verify \"#{File.join(signer_path, 'signature.pgp')}\" \"#{result_path}\" 2>&1 | head -n1 | grep \"key ID\" | awk '{ print $15 }'` > /dev/null 2>&1")
+  if !system("gpg --quiet --batch --verify \"#{File.join(signer_path, 'signature.pgp')}\" \"#{result_path}\"")
     puts "#{signer_dir}: BAD SIGNATURE"
     did_fail = true
   elsif current_manifest and result['out_manifest'] != current_manifest
