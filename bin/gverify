@@ -78,13 +78,23 @@ Dir.foreach(release_path) do |signer_dir|
   result_path = sanitize_path(File.join(signer_path, result_file), "result path")
   result = YAML.load_file(result_path)
   system("gpg --keyserver pgp.mit.edu --recv-keys `gpg --quiet --batch --verify \"#{File.join(signer_path, 'signature.pgp')}\" \"#{result_path}\" 2>&1 | head -n1 | grep \"key ID\" | awk '{ print $15 }'` > /dev/null 2>&1")
-  if !system("gpg --quiet --batch --verify \"#{File.join(signer_path, 'signature.pgp')}\" \"#{result_path}\"")
+  out = `gpg --quiet --batch --verify \"#{File.join(signer_path, 'signature.pgp')}\" \"#{result_path}\" 2>&1`
+  if $? != 0
+    out.each do |line|
+      if line =~ /^gpg: Signature made/
+        info(line)
+      else
+        puts line
+      end
+    end
     puts "#{signer_dir}: BAD SIGNATURE"
     did_fail = true
   elsif current_manifest and result['out_manifest'] != current_manifest
+    info(out)
     puts "#{signer_dir}: MISMATCH"
     did_fail = true
   else
+    info(out)
     puts "#{signer_dir}: OK"
   end
   current_manifest = result['out_manifest']
