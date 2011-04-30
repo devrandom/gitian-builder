@@ -22,7 +22,7 @@ def sanitize_path(str, where)
 end
 
 def info(str)
-  puts str unless @options[:quiet]
+  puts str if @options[:verbose]
 end
 
 ################################
@@ -30,8 +30,8 @@ end
 OptionParser.new do |opts|
   opts.banner = "Usage: build [options] <build-description>.yml"
 
-  opts.on("-q", "--quiet", "be quiet") do |v|
-    @options[:quiet] = v
+  opts.on("-v", "--verbose", "be more verbose") do |v|
+    @options[:verbose] = v
   end
   opts.on("-r REL", "--release REL", "release name") do |v|
     @options[:release] = v
@@ -90,11 +90,27 @@ Dir.foreach(release_path) do |signer_dir|
     puts "#{signer_dir}: BAD SIGNATURE"
     did_fail = true
   elsif current_manifest and result['out_manifest'] != current_manifest
-    info(out)
+    out.each do |line|
+      if line =~ /^gpg: Signature made/
+        info(line)
+      elsif line =~ /^gpg: Good signature/
+        info(line)
+      else
+        puts line
+      end
+    end
     puts "#{signer_dir}: MISMATCH"
     did_fail = true
   else
-    info(out)
+    out.each do |line|
+      if line =~ /^gpg: Signature made/
+        info(line)
+      elsif line =~ /^gpg: Good signature/
+        info(line)
+      else
+        puts line
+      end
+    end
     puts "#{signer_dir}: OK"
   end
   current_manifest = result['out_manifest']
