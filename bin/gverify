@@ -95,6 +95,8 @@ Dir.foreach(release_path) do |signer_dir|
         info(line)
       elsif line =~ /^gpg: Good signature/
         info(line)
+      elsif line =~ /^gpg:                 aka/
+        info(line)
       else
         puts line
       end
@@ -106,6 +108,8 @@ Dir.foreach(release_path) do |signer_dir|
       if line =~ /^gpg: Signature made/
         info(line)
       elsif line =~ /^gpg: Good signature/
+        info(line)
+      elsif line =~ /^gpg:                 aka/
         info(line)
       else
         puts line
