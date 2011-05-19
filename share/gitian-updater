@@ -1,0 +1,72 @@
+#!/usr/bin/python
+
+import sys, os
+from os import path
+import shutil
+import re
+import tempfile
+import atexit
+import urllib2
+from zipfile import ZipFile
+
+def sanitize_path(dir_name, name, where):
+    if re.search(r'[^/\w.-]', name):
+        raise ValueError, "unsanitary path in %s"%(where)
+    full_name = path.normpath(path.join(dir_name, name))
+    if full_name.find(dir_name + os.sep) != 0:
+        raise ValueError, "unsafe path in %s"%(where)
+
+def remove_temp(tdir):
+    shutil.rmtree(tdir)
+
+def download(url, dest):
+    file_name = url.split('/')[-1]
+    u = urllib2.urlopen(url)
+    f = open(dest, 'w')
+    meta = u.info()
+    file_size = int(meta.getheaders("Content-Length")[0])
+    print "Downloading: %s Bytes: %s" % (file_name, file_size)
+
+    file_size_dl = 0
+    block_sz = 65536
+    while True:
+        buffer = u.read(block_sz)
+        if not buffer:
+            break
+
+        file_size_dl += block_sz
+        f.write(buffer)
+        status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / file_size)
+        status = status + chr(8)*(len(status)+1)
+        print status,
+
+    f.close()
+
+def extract(path, dir_name):
+    zipfile = ZipFile(path, 'r')
+    for name in zipfile.namelist():
+        sanitize_path(dir_name, name, "zip file")
+    zipfile.extractall(dir_name)
+    zipfile.close()
+
+args = sys.argv[:]
+full_prog = args.pop(0)
+
+if len(args) < 1:
+    print>>sys.stderr, "usage: %s URL\n"%(prog)
+    exit(1)
+
+prog = os.path.basename(full_prog)
+
+url = args.pop(0)
+
+tempdir = tempfile.mkdtemp('', prog)
+
+atexit.register(remove_temp, tempdir)
+
+package_file = path.join(tempdir, "package")
+download(url, package_file)
+
+extract(package_file, path.join(tempdir, "unpack"))
+
+#os.system("cd %s ; /bin/bash"%(tempdir))
