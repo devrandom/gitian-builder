@@ -58,6 +58,7 @@ def extract(dir_name, zip_path):
     return files
 
 def get_assertions(dir_name, file_names):
+    assertions = {"build" : {}}
     sums = {}
     to_check = {}
     for file_name in file_names:
@@ -72,10 +73,15 @@ def get_assertions(dir_name, file_names):
         if file_name.startswith("gitian"):
             del to_check[file_name]
             if file_name.endswith(".assert"):
-                retcode = subprocess.call(["gpg", '--quiet', '--batch', '--verify', os.path.join(dir_name, file_name + '.pgp'), os.path.join(dir_name, file_name)])
+                popen = subprocess.Popen(["gpg", '--keyid-format', 'long', '--quiet', '--batch', '--verify', os.path.join(dir_name, file_name + '.pgp'), os.path.join(dir_name, file_name)], stderr=subprocess.PIPE)
+                gpgout = popen.communicate()[1]
+                retcode = popen.wait()
                 if retcode != 0:
                     print 'pgp verify failed for %s' %(file_name)
                     error = True
+                    continue
+                match = re.search(r'key ([A-F0-9]+)$', gpgout, re.M)
+                assertions['build'][match.group(1)] = 1
                 f = file(os.path.join(dir_name, file_name), 'r')
                 assertion = yaml.load(f, OrderedDictYAMLLoader)
                 f.close()
@@ -84,6 +90,7 @@ def get_assertions(dir_name, file_names):
                         if out_manifest != assertion['out_manifest']:
                             print 'not all out manifests are identical'
                             error = True
+                            continue
                     else:
                         out_manifest = assertion['out_manifest']
 
@@ -97,11 +104,23 @@ def get_assertions(dir_name, file_names):
             del to_check[summed_file]
 
     if len(to_check) > 0:
-        print "some of the files were not checksummed:"
+        print "Some of the files were not checksummed:"
         for key in to_check:
             print "  ", key
 
-    return (error)
+    return (error, assertions)
+
+def check_assertions(config, assertions):
+    total_weight = 0
+    for key in assertions['build']:
+        if not config['signers'].has_key(key):
+            print 'key %s is not in config, skipping'%(key)
+        total_weight += config['signers'][key]['weight']
+    if total_weight < config['minimum_weight']:
+        print "The total weight of signatures is %d, which is less than the minimum required %d"%(total_weight, config['minimum_weight'])
+        return False
+    return True
+
 
 class OrderedDictYAMLLoader(yaml.Loader):
     """
@@ -125,13 +144,18 @@ class OrderedDictYAMLLoader(yaml.Loader):
 args = sys.argv[:]
 full_prog = args.pop(0)
 
-if len(args) < 1:
-    print>>sys.stderr, "usage: %s URL\n"%(prog)
-    exit(1)
-
 prog = os.path.basename(full_prog)
 
+if len(args) < 2:
+    print>>sys.stderr, "usage: %s URL CONFIG\n"%(full_prog)
+    exit(1)
+
 url = args.pop(0)
+config_file = args.pop(0)
+
+f = file(config_file, 'r')
+config = yaml.safe_load(f)
+f.close()
 
 tempdir = tempfile.mkdtemp('', prog)
 
@@ -142,9 +166,13 @@ download(url, package_file)
 
 unpack_dir = path.join(tempdir, "unpack")
 files = extract(unpack_dir, package_file)
-(error) = get_assertions(unpack_dir, files)
+(error, assertions) = get_assertions(unpack_dir, files)
 if error:
-    print "there were errors, aborting"
+    print "There were errors getting assertions, aborting"
+    exit(1)
+
+if not check_assertions(config, assertions):
+    print "There were errors checking assertions, build is untrusted, aborting"
     exit(1)
 
 #os.system("cd %s ; /bin/bash"%(tempdir))
