@@ -7,6 +7,7 @@ import re
 import tempfile
 import atexit
 import urllib2
+import argparse
 import yaml
 from zipfile import ZipFile
 
@@ -57,12 +58,12 @@ def extract(dir_name, zip_path):
             files.append(path.normpath(name))
     return files
 
-def get_assertions(dir_name, file_names):
+def get_assertions(temp_dir, unpack_dir, file_names):
     assertions = {"build" : {}}
     sums = {}
     to_check = {}
     for file_name in file_names:
-        shasum = subprocess.Popen(["sha256sum", '-b', os.path.join(dir_name, file_name)], stdout=subprocess.PIPE).communicate()[0][0:64]
+        shasum = subprocess.Popen(["sha256sum", '-b', os.path.join(unpack_dir, file_name)], stdout=subprocess.PIPE).communicate()[0][0:64]
         sums[file_name] = shasum
         to_check[file_name] = 1
 
@@ -73,51 +74,63 @@ def get_assertions(dir_name, file_names):
         if file_name.startswith("gitian"):
             del to_check[file_name]
             if file_name.endswith(".assert"):
-                popen = subprocess.Popen(["gpg", '--keyid-format', 'long', '--quiet', '--batch', '--verify', os.path.join(dir_name, file_name + '.pgp'), os.path.join(dir_name, file_name)], stderr=subprocess.PIPE)
+                popen = subprocess.Popen(["gpg", '--homedir', path.join(temp_dir, 'gpg'), '--keyid-format', 'long', '--quiet', '--batch', '--verify', os.path.join(unpack_dir, file_name + '.pgp'), os.path.join(unpack_dir, file_name)], stderr=subprocess.PIPE)
                 gpgout = popen.communicate()[1]
                 retcode = popen.wait()
                 if retcode != 0:
-                    print 'pgp verify failed for %s' %(file_name)
+                    print>>sys.stderr, 'PGP verify failed for %s' %(file_name)
                     error = True
                     continue
                 match = re.search(r'key ([A-F0-9]+)$', gpgout, re.M)
                 assertions['build'][match.group(1)] = 1
-                f = file(os.path.join(dir_name, file_name), 'r')
+                f = file(os.path.join(unpack_dir, file_name), 'r')
                 assertion = yaml.load(f, OrderedDictYAMLLoader)
                 f.close()
                 if assertion['out_manifest']:
                     if out_manifest:
                         if out_manifest != assertion['out_manifest']:
-                            print 'not all out manifests are identical'
+                            print>>sys.stderr, 'not all out manifests are identical'
                             error = True
                             continue
                     else:
                         out_manifest = assertion['out_manifest']
 
-    for line in out_manifest.split("\n"):
-        if line != "":
-            shasum = line[0:64]
-            summed_file = line[66:]
-            if sums[summed_file] != shasum:
-                print "sha256sum mismatch on %s" %(summed_file)
-                error = True
-            del to_check[summed_file]
+    if out_manifest:
+        for line in out_manifest.split("\n"):
+            if line != "":
+                shasum = line[0:64]
+                summed_file = line[66:]
+                if sums[summed_file] != shasum:
+                    print>>sys.stderr, "sha256sum mismatch on %s" %(summed_file)
+                    error = True
+                del to_check[summed_file]
+        if len(to_check) > 0:
+            print>>sys.stderr, "Some of the files were not checksummed:"
+            for key in to_check:
+                print>>sys.stderr, "  ", key
+    else:
+        print>>sys.stderr, 'No build assertions found'
+        error = True
 
-    if len(to_check) > 0:
-        print "Some of the files were not checksummed:"
-        for key in to_check:
-            print "  ", key
+    return (not error, assertions, sums)
 
-    return (error, assertions)
+def import_keys(temp_dir, config):
+    os.mkdir(path.join(temp_dir, 'gpg'), 0700)
+    signers = config['signers']
+    for keyid in signers:
+        popen = subprocess.Popen(["gpg", '--homedir', path.join(temp_dir, 'gpg'), '--import', '--quiet', '--batch'], stdin=subprocess.PIPE)
+        popen.communicate(signers[keyid]['key'])
+        if popen.wait() != 0:
+            print>>sys.stderr, 'Key %s failed to import'%(keyid)
 
 def check_assertions(config, assertions):
     total_weight = 0
     for key in assertions['build']:
         if not config['signers'].has_key(key):
-            print 'key %s is not in config, skipping'%(key)
+            print>>sys.stderr, 'key %s is not in config, skipping'%(key)
         total_weight += config['signers'][key]['weight']
     if total_weight < config['minimum_weight']:
-        print "The total weight of signatures is %d, which is less than the minimum required %d"%(total_weight, config['minimum_weight'])
+        print>>sys.stderr, "The total weight of signatures is %d, which is less than the minimum required %d"%(total_weight, config['minimum_weight'])
         return False
     return True
 
@@ -141,38 +154,54 @@ class OrderedDictYAMLLoader(yaml.Loader):
                 value = self.construct_object(value)
                 data[key] = value
 
-args = sys.argv[:]
-full_prog = args.pop(0)
+full_prog = sys.argv[0]
 
 prog = os.path.basename(full_prog)
 
-if len(args) < 2:
-    print>>sys.stderr, "usage: %s URL CONFIG\n"%(full_prog)
-    exit(1)
+parser = argparse.ArgumentParser(description='Download a verify a gitian package')
+parser.add_argument('--url', metavar='URL', type=str, nargs='+', required=True,
+                   help='one or more URLs where the package can be found')
+parser.add_argument('--config', metavar='CONF', type=str, required=True,
+                   help='a configuration file')
+parser.add_argument('--dest', metavar='DEST', type=str, required=True,
+                   help='the destination directory for unpacking')
 
-url = args.pop(0)
-config_file = args.pop(0)
+args = parser.parse_args()
+
+url = args.url[0]
+config_file = args.config
 
 f = file(config_file, 'r')
 config = yaml.safe_load(f)
 f.close()
 
-tempdir = tempfile.mkdtemp('', prog)
+if path.exists(args.dest):
+    print>>sys.stderr, "destination already exists, please remove it first"
+    exit(1)
 
-atexit.register(remove_temp, tempdir)
+temp_dir = tempfile.mkdtemp('', prog)
 
-package_file = path.join(tempdir, "package")
+atexit.register(remove_temp, temp_dir)
+
+import_keys(temp_dir, config)
+
+package_file = path.join(temp_dir, 'package')
 download(url, package_file)
 
-unpack_dir = path.join(tempdir, "unpack")
+unpack_dir = path.join(temp_dir, 'unpack')
 files = extract(unpack_dir, package_file)
-(error, assertions) = get_assertions(unpack_dir, files)
-if error:
-    print "There were errors getting assertions, aborting"
+(success, assertions, out_manifest) = get_assertions(temp_dir, unpack_dir, files)
+if not success:
+    print>>sys.stderr, "There were errors getting assertions, aborting"
     exit(1)
 
 if not check_assertions(config, assertions):
-    print "There were errors checking assertions, build is untrusted, aborting"
+    print>>sys.stderr, "There were errors checking assertions, build is untrusted, aborting"
     exit(1)
 
-#os.system("cd %s ; /bin/bash"%(tempdir))
+shutil.copytree(unpack_dir, args.dest)
+f = file(path.join(args.dest, '.manifest'), 'w')
+yaml.dump(out_manifest, f)
+f.close()
+
+#os.system("cd %s ; /bin/bash"%(temp_dir))
