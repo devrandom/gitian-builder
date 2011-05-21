@@ -191,7 +191,7 @@ out_dir = File.join(build_dir, "out")
 out_sums = {}
 
 info "Generating report"
-Dir.glob(File.join(out_dir, '**', '*')).sort.each do |file_in_out|
+Dir.glob(File.join(out_dir, '**', '*'), File::FNM_DOTMATCH).sort.each do |file_in_out|
   next if File.directory?(file_in_out)
   file = file_in_out.sub(out_dir + File::SEPARATOR, '')
   file = sanitize_path(file, file_in_out)

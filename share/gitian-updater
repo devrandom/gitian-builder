@@ -1,12 +1,13 @@
 #!/usr/bin/python
 
-import sys, os
+import sys, os, subprocess
 from os import path
 import shutil
 import re
 import tempfile
 import atexit
 import urllib2
+import yaml
 from zipfile import ZipFile
 
 def sanitize_path(dir_name, name, where):
@@ -40,14 +41,86 @@ def download(url, dest):
         status = status + chr(8)*(len(status)+1)
         print status,
 
+    print
     f.close()
 
-def extract(path, dir_name):
-    zipfile = ZipFile(path, 'r')
+def extract(dir_name, zip_path):
+    zipfile = ZipFile(zip_path, 'r')
+    files = []
     for name in zipfile.namelist():
         sanitize_path(dir_name, name, "zip file")
     zipfile.extractall(dir_name)
     zipfile.close()
+
+    for name in zipfile.namelist():
+        if path.isfile(path.join(dir_name, name)):
+            files.append(path.normpath(name))
+    return files
+
+def get_assertions(dir_name, file_names):
+    sums = {}
+    to_check = {}
+    for file_name in file_names:
+        shasum = subprocess.Popen(["sha256sum", '-b', os.path.join(dir_name, file_name)], stdout=subprocess.PIPE).communicate()[0][0:64]
+        sums[file_name] = shasum
+        to_check[file_name] = 1
+
+    out_manifest = False
+    error = False
+
+    for file_name in file_names:
+        if file_name.startswith("gitian"):
+            del to_check[file_name]
+            if file_name.endswith(".assert"):
+                retcode = subprocess.call(["gpg", '--quiet', '--batch', '--verify', os.path.join(dir_name, file_name + '.pgp'), os.path.join(dir_name, file_name)])
+                if retcode != 0:
+                    print 'pgp verify failed for %s' %(file_name)
+                    error = True
+                f = file(os.path.join(dir_name, file_name), 'r')
+                assertion = yaml.load(f, OrderedDictYAMLLoader)
+                f.close()
+                if assertion['out_manifest']:
+                    if out_manifest:
+                        if out_manifest != assertion['out_manifest']:
+                            print 'not all out manifests are identical'
+                            error = True
+                    else:
+                        out_manifest = assertion['out_manifest']
+
+    for line in out_manifest.split("\n"):
+        if line != "":
+            shasum = line[0:64]
+            summed_file = line[66:]
+            if sums[summed_file] != shasum:
+                print "sha256sum mismatch on %s" %(summed_file)
+                error = True
+            del to_check[summed_file]
+
+    if len(to_check) > 0:
+        print "some of the files were not checksummed:"
+        for key in to_check:
+            print "  ", key
+
+    return (error)
+
+class OrderedDictYAMLLoader(yaml.Loader):
+    """
+    A YAML loader that loads ordered yaml maps into a dictionary.
+    """
+
+    def __init__(self, *args, **kwargs):
+        yaml.Loader.__init__(self, *args, **kwargs)
+
+        self.add_constructor(u'!omap', type(self).construct_yaml_map)
+
+    def construct_yaml_map(self, node):
+        data = dict()
+        yield data
+        for mapping in node.value:
+            for key, value in mapping.value:
+                key = self.construct_object(key)
+                value = self.construct_object(value)
+                data[key] = value
 
 args = sys.argv[:]
 full_prog = args.pop(0)
@@ -67,6 +140,11 @@ atexit.register(remove_temp, tempdir)
 package_file = path.join(tempdir, "package")
 download(url, package_file)
 
-extract(package_file, path.join(tempdir, "unpack"))
+unpack_dir = path.join(tempdir, "unpack")
+files = extract(unpack_dir, package_file)
+(error) = get_assertions(unpack_dir, files)
+if error:
+    print "there were errors, aborting"
+    exit(1)
 
 #os.system("cd %s ; /bin/bash"%(tempdir))
