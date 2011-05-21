@@ -11,6 +11,8 @@ import argparse
 import yaml
 from zipfile import ZipFile
 
+quiet = 0
+
 def sanitize_path(dir_name, name, where):
     if re.search(r'[^/\w.-]', name):
         raise ValueError, "unsanitary path in %s"%(where)
@@ -27,7 +29,8 @@ def download(url, dest):
     f = open(dest, 'w')
     meta = u.info()
     file_size = int(meta.getheaders("Content-Length")[0])
-    print "Downloading: %s Bytes: %s" % (file_name, file_size)
+    if quiet == 0:
+        print "Downloading: %s Bytes: %s" % (file_name, file_size)
 
     file_size_dl = 0
     block_sz = 65536
@@ -40,9 +43,11 @@ def download(url, dest):
         f.write(buffer)
         status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / file_size)
         status = status + chr(8)*(len(status)+1)
-        print status,
+        if quiet == 0:
+            print status,
 
-    print
+    if quiet == 0:
+        print
     f.close()
 
 def extract(dir_name, zip_path):
@@ -78,7 +83,8 @@ def get_assertions(temp_dir, unpack_dir, file_names):
                 gpgout = popen.communicate()[1]
                 retcode = popen.wait()
                 if retcode != 0:
-                    print>>sys.stderr, 'PGP verify failed for %s' %(file_name)
+                    if quiet <= 1:
+                        print>>sys.stderr, 'PGP verify failed for %s' %(file_name)
                     error = True
                     continue
                 match = re.search(r'key ([A-F0-9]+)$', gpgout, re.M)
@@ -104,7 +110,7 @@ def get_assertions(temp_dir, unpack_dir, file_names):
                     print>>sys.stderr, "sha256sum mismatch on %s" %(summed_file)
                     error = True
                 del to_check[summed_file]
-        if len(to_check) > 0:
+        if len(to_check) > 0 and quiet == 0:
             print>>sys.stderr, "Some of the files were not checksummed:"
             for key in to_check:
                 print>>sys.stderr, "  ", key
@@ -125,14 +131,21 @@ def import_keys(temp_dir, config):
 
 def check_assertions(config, assertions):
     total_weight = 0
+    signers = config['signers']
+    if quiet == 0:
+        print 'Signatures from:'
     for key in assertions['build']:
-        if not config['signers'].has_key(key):
-            print>>sys.stderr, 'key %s is not in config, skipping'%(key)
-        total_weight += config['signers'][key]['weight']
+        if not signers.has_key(key):
+            if quiet <= 1:
+                print>>sys.stderr, 'key %s is not in config, skipping'%(key)
+            continue
+        if quiet == 0:
+            print '    %s : weight %d'%(signers[key]['name'], signers[key]['weight'])
+        total_weight += signers[key]['weight']
     if total_weight < config['minimum_weight']:
         print>>sys.stderr, "The total weight of signatures is %d, which is less than the minimum required %d"%(total_weight, config['minimum_weight'])
         return False
-    return True
+    return total_weight
 
 
 class OrderedDictYAMLLoader(yaml.Loader):
@@ -159,17 +172,19 @@ full_prog = sys.argv[0]
 prog = os.path.basename(full_prog)
 
 parser = argparse.ArgumentParser(description='Download a verify a gitian package')
-parser.add_argument('--url', metavar='URL', type=str, nargs='+', required=True,
+parser.add_argument('-u', '--url', metavar='URL', type=str, nargs='+', required=True,
                    help='one or more URLs where the package can be found')
-parser.add_argument('--config', metavar='CONF', type=str, required=True,
+parser.add_argument('-c', '--config', metavar='CONF', type=str, required=True,
                    help='a configuration file')
-parser.add_argument('--dest', metavar='DEST', type=str, required=True,
+parser.add_argument('-d', '--dest', metavar='DEST', type=str, required=True,
                    help='the destination directory for unpacking')
+parser.add_argument('-q', '--quiet', action='append_const', const=1, default=[], help='be quiet')
 
 args = parser.parse_args()
 
 url = args.url[0]
 config_file = args.config
+quiet = len(args.quiet)
 
 f = file(config_file, 'r')
 config = yaml.safe_load(f)
@@ -191,13 +206,16 @@ download(url, package_file)
 unpack_dir = path.join(temp_dir, 'unpack')
 files = extract(unpack_dir, package_file)
 (success, assertions, out_manifest) = get_assertions(temp_dir, unpack_dir, files)
-if not success:
-    print>>sys.stderr, "There were errors getting assertions, aborting"
-    exit(1)
+if not success and quiet <= 1:
+    print>>sys.stderr, "There were errors getting assertions"
 
-if not check_assertions(config, assertions):
+total_weight = check_assertions(config, assertions)
+if not total_weight:
     print>>sys.stderr, "There were errors checking assertions, build is untrusted, aborting"
     exit(1)
+
+if quiet == 0:
+    print>>sys.stderr, "Successful with signature weight %d"%(total_weight)
 
 shutil.copytree(unpack_dir, args.dest)
 f = file(path.join(args.dest, '.manifest'), 'w')
