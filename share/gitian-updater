@@ -1,5 +1,21 @@
 #!/usr/bin/python
 
+#   Gitian Downloader - download/update and verify a gitian distribution package
+
+#   This library is free software; you can redistribute it and/or
+#   modify it under the terms of the GNU Library General Public
+#   License as published by the Free Software Foundation; either
+#   version 2 of the License, or (at your option) any later version.
+#
+#   This library is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#   Library General Public License for more details.
+#
+#   You should have received a copy of the GNU Library General Public
+#   License along with this library; if not, write to the Free Software
+#   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
 import sys, os, subprocess
 from os import path
 import shutil
@@ -10,6 +26,10 @@ import urllib2
 import argparse
 import yaml
 from zipfile import ZipFile
+
+inject_config_string = "INJECT" + "CONFIG"
+injected_config = """INJECTCONFIG"""
+have_injected_config = injected_config != inject_config_string
 
 quiet = 0
 
@@ -172,23 +192,50 @@ full_prog = sys.argv[0]
 prog = os.path.basename(full_prog)
 
 parser = argparse.ArgumentParser(description='Download a verify a gitian package')
-parser.add_argument('-u', '--url', metavar='URL', type=str, nargs='+', required=True,
+parser.add_argument('-u', '--url', metavar='URL', type=str, nargs='+', required=False,
                    help='one or more URLs where the package can be found')
-parser.add_argument('-c', '--config', metavar='CONF', type=str, required=True,
+parser.add_argument('-c', '--config', metavar='CONF', type=str, required=not have_injected_config,
                    help='a configuration file')
-parser.add_argument('-d', '--dest', metavar='DEST', type=str, required=True,
+parser.add_argument('-d', '--dest', metavar='DEST', type=str, required=False,
                    help='the destination directory for unpacking')
 parser.add_argument('-q', '--quiet', action='append_const', const=1, default=[], help='be quiet')
+parser.add_argument('-m', '--customize', metavar='OUTPUT', type=str, help='generate a customized version of the script with the given config')
 
 args = parser.parse_args()
 
-url = args.url[0]
-config_file = args.config
 quiet = len(args.quiet)
 
-f = file(config_file, 'r')
-config = yaml.safe_load(f)
-f.close()
+if args.config:
+    f = file(args.config, 'r')
+    if args.customize:
+        s = file(full_prog, 'r')
+        script = s.read()
+        s.close()
+        config = f.read()
+        script = script.replace(inject_config_string, config)
+        s = file(args.customize, 'w')
+        s.write(script)
+        s.close()
+        os.chmod(args.customize, 0750)
+        exit(0)
+
+    config = yaml.safe_load(f)
+    f.close()
+else:
+    config = yaml.safe_load(injected_config)
+
+if not args.dest:
+    parser.error('argument -d/--dest is required unless -m is specified')
+
+if args.url:
+    urls = args.url
+else:
+    urls = config['urls']
+    if not urls:
+        parser.error('argument -u/--url is required since config does not specify it')
+
+# TODO: handle multiple urls, rss, atom, etc.
+url = urls[0]
 
 if path.exists(args.dest):
     print>>sys.stderr, "destination already exists, please remove it first"
