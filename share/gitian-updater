@@ -99,15 +99,15 @@ def get_assertions(temp_dir, unpack_dir, file_names):
         if file_name.startswith("gitian"):
             del to_check[file_name]
             if file_name.endswith(".assert"):
-                popen = subprocess.Popen(["gpg", '--homedir', path.join(temp_dir, 'gpg'), '--keyid-format', 'long', '--quiet', '--batch', '--verify', os.path.join(unpack_dir, file_name + '.pgp'), os.path.join(unpack_dir, file_name)], stderr=subprocess.PIPE)
-                gpgout = popen.communicate()[1]
+                popen = subprocess.Popen(["gpg", '--status-fd', '1', '--homedir', path.join(temp_dir, 'gpg'), '--verify', os.path.join(unpack_dir, file_name + '.pgp'), os.path.join(unpack_dir, file_name)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                gpgout = popen.communicate()[0]
                 retcode = popen.wait()
                 if retcode != 0:
                     if quiet <= 1:
                         print>>sys.stderr, 'PGP verify failed for %s' %(file_name)
                     error = True
                     continue
-                match = re.search(r'key ([A-F0-9]+)$', gpgout, re.M)
+                match = re.search(r'^\[GNUPG:\] VALIDSIG ([A-F0-9]+)', gpgout, re.M)
                 assertions['build'][match.group(1)] = 1
                 f = file(os.path.join(unpack_dir, file_name), 'r')
                 assertion = yaml.load(f, OrderedDictYAMLLoader)
@@ -141,13 +141,23 @@ def get_assertions(temp_dir, unpack_dir, file_names):
     return (not error, assertions, sums)
 
 def import_keys(temp_dir, config):
-    os.mkdir(path.join(temp_dir, 'gpg'), 0700)
+    gpg_dir = path.join(temp_dir, 'gpg')
+    os.mkdir(gpg_dir, 0700)
     signers = config['signers']
     for keyid in signers:
-        popen = subprocess.Popen(["gpg", '--homedir', path.join(temp_dir, 'gpg'), '--import', '--quiet', '--batch'], stdin=subprocess.PIPE)
-        popen.communicate(signers[keyid]['key'])
+        key_path = path.join('gitian', signers[keyid]['key'] + '-key.pgp')
+        popen = subprocess.Popen(['gpg', '--status-fd', '1', '--homedir', gpg_dir, '--import', path.join(temp_dir, 'unpack', key_path)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        gpgout = popen.communicate(signers[keyid]['key'])[0]
         if popen.wait() != 0:
             print>>sys.stderr, 'Key %s failed to import'%(keyid)
+            continue
+        expected_keyid = keyid
+        if signers[keyid].has_key('keyid'):
+            expected_keyid = signers[keyid]['keyid']
+        if gpgout.count(expected_keyid) == 0:
+            print>>sys.stderr, 'Key file %s did not contain the key %s'%(key_path, keyid)
+        if gpgout.count('IMPORT_OK') != 1 and quiet <= 1:
+            print>>sys.stderr, 'Key file %s contained more than one key'%(key_path)
 
 def check_assertions(config, assertions):
     total_weight = 0
@@ -245,13 +255,14 @@ temp_dir = tempfile.mkdtemp('', prog)
 
 atexit.register(remove_temp, temp_dir)
 
-import_keys(temp_dir, config)
-
 package_file = path.join(temp_dir, 'package')
 download(url, package_file)
 
 unpack_dir = path.join(temp_dir, 'unpack')
 files = extract(unpack_dir, package_file)
+
+import_keys(temp_dir, config)
+
 (success, assertions, out_manifest) = get_assertions(temp_dir, unpack_dir, files)
 if not success and quiet <= 1:
     print>>sys.stderr, "There were errors getting assertions"
