@@ -63,15 +63,25 @@ package_name = sanitize(package_name, "package name")
 result_file = "#{package_name}-res.yml"
 result_path = File.join(result_dir, result_file)
 File.exists?(result_path) or raise "#{result_path} does not exist"
+result = YAML.load_file(result_path)
 
 destination = @options[:destination] || File.join(base_dir, "sigs", package_name)
-release = @options[:release] || "current"
+release = @options[:release] || "test"
 release = sanitize(release, "release")
+
+result['release'] = release
+result['name'] = package_name
+result['type'] = 'build'
+
 signer = @options[:signer] or raise "must supply signer with --signer"
 
 FileUtils.mkdir_p(destination)
 
 release_path = File.join(destination, release, signer)
 FileUtils.mkdir_p(release_path)
+assert_path = File.join(release_path, "#{package_name}-build.assert")
+File.open(assert_path, "w") do |io|
+  io.write result.to_yaml
+end
 FileUtils.cp(result_path, release_path)
-system!("gpg --detach-sign -u \"#{signer}\" -o \"#{release_path}/signature.pgp\" #{result_path}")
+system!("gpg --detach-sign -u \"#{signer}\" #{assert_path}")
