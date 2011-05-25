@@ -6,24 +6,21 @@ Construct a download config:
 
     --- 
     signers:
-      989F6B3048A116B5:
+      BF6273FAEF7CC0BA1F562E50989F6B3048A116B5:
         weight: 20
         name: Devrandom
-        key: |-
-          -----BEGIN PGP PUBLIC KEY BLOCK-----
-          Version: GnuPG v1.4.10 (GNU/Linux)
-
-          mQINBE2OgyMBEAC/ZNlctrNpVk1CUYbIflQtNqybqGPFzxp2F+EYdMfEXvR9e7bP
-          ...
+        key: devrandom
     minimum_weight: 30
 
-the keys can be extracted with:
+The keys can be extracted with:
 
-  gpg --export-options export-minimal --export -a KEYID
+  gpg --export-options export-minimal --export KEYID
 
-the long key id can be obtained with:
+and saved into devrandom-key.pgp (see "key" in signers).
 
-  gpg -kv --keyid-format long KEYID
+The long key id can be obtained with:
+
+  gpg --status-fd 1 --dry-run --import KEYFILE
 
 ## ZIP file
 

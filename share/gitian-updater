@@ -23,6 +23,7 @@ import re
 import tempfile
 import atexit
 import urllib2
+import libxml2
 import argparse
 import yaml
 from zipfile import ZipFile
@@ -44,13 +45,15 @@ def remove_temp(tdir):
     shutil.rmtree(tdir)
 
 def download(url, dest):
+    if quiet == 0:
+        print "Downloading from %s"%(url)
     file_name = url.split('/')[-1]
     u = urllib2.urlopen(url)
     f = open(dest, 'w')
     meta = u.info()
     file_size = int(meta.getheaders("Content-Length")[0])
     if quiet == 0:
-        print "Downloading: %s Bytes: %s" % (file_name, file_size)
+        print "Downloading: %s Bytes: %s"%(file_name, file_size)
 
     file_size_dl = 0
     block_sz = 65536
@@ -59,7 +62,7 @@ def download(url, dest):
         if not buffer:
             break
 
-        file_size_dl += block_sz
+        file_size_dl += len(buffer)
         f.write(buffer)
         status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / file_size)
         status = status + chr(8)*(len(status)+1)
@@ -237,15 +240,18 @@ else:
 if not args.dest:
     parser.error('argument -d/--dest is required unless -m is specified')
 
+rsses = []
+
 if args.url:
     urls = args.url
 else:
     urls = config['urls']
+    if config.has_key('rss'):
+        rsses = config['rss']
     if not urls:
         parser.error('argument -u/--url is required since config does not specify it')
 
-# TODO: handle multiple urls, rss, atom, etc.
-url = urls[0]
+# TODO: rss, atom, etc.
 
 if path.exists(args.dest):
     print>>sys.stderr, "destination already exists, please remove it first"
@@ -256,7 +262,41 @@ temp_dir = tempfile.mkdtemp('', prog)
 atexit.register(remove_temp, temp_dir)
 
 package_file = path.join(temp_dir, 'package')
-download(url, package_file)
+
+downloaded = False
+
+for rss in rsses:
+    try:
+        feed = libxml2.parseDoc(urllib2.urlopen(rss['url']).read())
+        url = None
+        for node in feed.xpathEval(rss['xpath']):
+            if re.search(rss['pattern'], str(node)):
+                url = str(node)
+                break
+        try:
+            download(url, package_file)
+            downloaded = True
+            break
+        except:
+            print>>sys.stderr, "could not download from %s, trying next rss"%(url)
+            pass
+    except:
+        print>>sys.stderr, "could read not from rss %s"%(rss)
+        pass
+
+if not downloaded:
+    for url in urls:
+        try:
+            download(url, package_file)
+            downloaded = True
+            break
+        except:
+            print>>sys.stderr, "could not download from %s, trying next url"%(url)
+            pass
+
+if not downloaded:
+    print>>sys.stderr, "out of places to download from, try later"
+    exit(1)
 
 unpack_dir = path.join(temp_dir, 'unpack')
 files = extract(unpack_dir, package_file)

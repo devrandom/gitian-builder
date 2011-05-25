@@ -1,3 +1,5 @@
 Downloader
 
-* incremenral update of dest directory
+* incremental update of dest directory
+* check version #
+* json
