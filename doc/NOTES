@@ -2,6 +2,5 @@ Downloader
 
 * incremental update of dest directory
   * overwrite existing files (optionally balk if sha256sum changed)
-  * remove files that are in manifest and not in new version
   * remove empty dirs as result of previous action
 * json

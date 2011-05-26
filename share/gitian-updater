@@ -218,6 +218,7 @@ parser.add_argument('-c', '--config', metavar='CONF', type=str, required=not hav
 parser.add_argument('-d', '--dest', metavar='DEST', type=str, required=False,
                    help='the destination directory for unpacking')
 parser.add_argument('-q', '--quiet', action='append_const', const=1, default=[], help='be quiet')
+parser.add_argument('-f', '--force', action='store_true', help='force downgrades and such')
 parser.add_argument('-m', '--customize', metavar='OUTPUT', type=str, help='generate a customized version of the script with the given config')
 
 args = parser.parse_args()
@@ -327,7 +328,7 @@ if old_manifest:
     if out_manifest['name'] != old_manifest['name']:
         print>>sys.stderr, "The old directory has a manifest for a different package"
         exit(1)
-    if LooseVersion(out_manifest['release']) < LooseVersion(old_manifest['release']):
+    if LooseVersion(out_manifest['release']) < LooseVersion(old_manifest['release']) and not args.force:
         print>>sys.stderr, "This would downgrade from version %s to %s"%(old_manifest['release'],out_manifest['release'])
         exit(1)
     elif LooseVersion(out_manifest['release']) == LooseVersion(old_manifest['release']):
@@ -355,6 +356,12 @@ for root, dirs, files in os.walk(unpack_dir, topdown = True):
         os.mkdir(path.join(dest_path, rel))
     for f in files:
         shutil.copy2(path.join(root, f), path.join(dest_path, rel, f))
+
+removed = set(old_manifest['sums'].keys()).difference(out_manifest['sums'].keys())
+
+for f in removed:
+    if path.exists(path.join(dest_path, f)):
+        os.unlink(path.join(dest_path, f))
 
 f = file(path.join(dest_path, '.gitian-manifest'), 'w')
 yaml.dump(out_manifest, f)
