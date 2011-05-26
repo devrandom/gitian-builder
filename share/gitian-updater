@@ -27,6 +27,7 @@ import libxml2
 import argparse
 import yaml
 from zipfile import ZipFile
+from distutils.version import LooseVersion
 
 inject_config_string = "INJECT" + "CONFIG"
 injected_config = """INJECTCONFIG"""
@@ -89,6 +90,8 @@ def extract(dir_name, zip_path):
 def get_assertions(temp_dir, unpack_dir, file_names):
     assertions = {"build" : {}}
     sums = {}
+    name = None
+    release = None
     to_check = {}
     for file_name in file_names:
         shasum = subprocess.Popen(["sha256sum", '-b', os.path.join(unpack_dir, file_name)], stdout=subprocess.PIPE).communicate()[0][0:64]
@@ -102,7 +105,7 @@ def get_assertions(temp_dir, unpack_dir, file_names):
         if file_name.startswith("gitian"):
             del to_check[file_name]
             if file_name.endswith(".assert"):
-                popen = subprocess.Popen(["gpg", '--status-fd', '1', '--homedir', path.join(temp_dir, 'gpg'), '--verify', os.path.join(unpack_dir, file_name + '.pgp'), os.path.join(unpack_dir, file_name)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                popen = subprocess.Popen(["gpg", '--status-fd', '1', '--homedir', path.join(temp_dir, 'gpg'), '--verify', os.path.join(unpack_dir, file_name + '.sig'), os.path.join(unpack_dir, file_name)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 gpgout = popen.communicate()[0]
                 retcode = popen.wait()
                 if retcode != 0:
@@ -117,12 +120,14 @@ def get_assertions(temp_dir, unpack_dir, file_names):
                 f.close()
                 if assertion['out_manifest']:
                     if out_manifest:
-                        if out_manifest != assertion['out_manifest']:
-                            print>>sys.stderr, 'not all out manifests are identical'
+                        if out_manifest != assertion['out_manifest'] or release != assertion['release'] or name != assertion['name']:
+                            print>>sys.stderr, 'not all out manifests/releases/names are identical'
                             error = True
                             continue
                     else:
                         out_manifest = assertion['out_manifest']
+                        release = assertion['release']
+                        name = assertion['name']
 
     if out_manifest:
         for line in out_manifest.split("\n"):
@@ -141,7 +146,8 @@ def get_assertions(temp_dir, unpack_dir, file_names):
         print>>sys.stderr, 'No build assertions found'
         error = True
 
-    return (not error, assertions, sums)
+    manifest = { 'sums' : sums, 'release' : release, 'name': name }
+    return (not error, assertions, manifest)
 
 def import_keys(temp_dir, config):
     gpg_dir = path.join(temp_dir, 'gpg')
@@ -237,7 +243,9 @@ if args.config:
 else:
     config = yaml.safe_load(injected_config)
 
-if not args.dest:
+dest_path = args.dest
+
+if not dest_path:
     parser.error('argument -d/--dest is required unless -m is specified')
 
 rsses = []
@@ -253,9 +261,19 @@ else:
 
 # TODO: rss, atom, etc.
 
-if path.exists(args.dest):
-    print>>sys.stderr, "destination already exists, please remove it first"
-    exit(1)
+old_manifest = None
+
+if path.exists(dest_path):
+    files = os.listdir(dest_path)
+    if path.dirname(full_prog) == dest_path:
+        files.remove(prog)
+
+    if not files.count('.gitian-manifest') and len(files) > 0:
+        print>>sys.stderr, "destination already exists, no .gitian-manifest and directory not empty. Please empty destination."
+        exit(1)
+    f = file(os.path.join(dest_path,'.gitian-manifest'), 'r')
+    old_manifest = yaml.load(f, OrderedDictYAMLLoader)
+    f.close()
 
 temp_dir = tempfile.mkdtemp('', prog)
 
@@ -304,6 +322,21 @@ files = extract(unpack_dir, package_file)
 import_keys(temp_dir, config)
 
 (success, assertions, out_manifest) = get_assertions(temp_dir, unpack_dir, files)
+
+if old_manifest:
+    if out_manifest['name'] != old_manifest['name']:
+        print>>sys.stderr, "The old directory has a manifest for a different package"
+        exit(1)
+    if LooseVersion(out_manifest['release']) < LooseVersion(old_manifest['release']):
+        print>>sys.stderr, "This would downgrade from version %s to %s"%(old_manifest['release'],out_manifest['release'])
+        exit(1)
+    elif LooseVersion(out_manifest['release']) == LooseVersion(old_manifest['release']):
+        if quiet <= 1:
+            print>>sys.stderr, "This is a reinstall of version %s"%(old_manifest['release'])
+    else:
+        if quiet == 0:
+            print>>sys.stderr, "Upgrading from version %s to %s"%(old_manifest['release'],out_manifest['release'])
+
 if not success and quiet <= 1:
     print>>sys.stderr, "There were errors getting assertions"
 
@@ -315,9 +348,14 @@ if not total_weight:
 if quiet == 0:
     print>>sys.stderr, "Successful with signature weight %d"%(total_weight)
 
-shutil.copytree(unpack_dir, args.dest)
-f = file(path.join(args.dest, '.manifest'), 'w')
+
+for root, dirs, files in os.walk(unpack_dir, topdown = True):
+    rel = path.relpath(root, unpack_dir)
+    if not path.exists(path.join(dest_path, rel)):
+        os.mkdir(path.join(dest_path, rel))
+    for f in files:
+        shutil.copy2(path.join(root, f), path.join(dest_path, rel, f))
+
+f = file(path.join(dest_path, '.gitian-manifest'), 'w')
 yaml.dump(out_manifest, f)
 f.close()
-
-#os.system("cd %s ; /bin/bash"%(temp_dir))
