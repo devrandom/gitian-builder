@@ -1,0 +1,39 @@
+# The Problem
+
+gcc sometimes generates slightly different code with the same semantics.
+
+## Optimizations
+
+The following optimizer flags reduce non-determinism when compiling wxWidgets:
+
+     -fno-tree-loop-optimize
+     -fno-trapping-math
+     -fno-tree-reassoc
+
+## Left Over
+
+Even with the above flags, the compiler still generates this difference in one out of 100 builds of wxWidgets:
+
+    monolib_property.o: elf64-elf_x86_64
+
+         aef7:    00
+         aef8:    45 31 f6                 xor     %r14d,%r14d
+         aefb:    48 8d 84 24 50 06 00 00  lea     0x650(%rsp),%rax
+    -    af03:    c6 44 24 67 00           movb    $0x0,0x67(%rsp)
+    -    af08:    48 83 c2 10              add     $0x10,%rdx
+    -    af0c:    48 83 c1 10              add     $0x10,%rcx
+    -    af10:    48 81 7c 24 08 ff ff ff  cmpq    $0xffffff,0x8(%rsp)
+    -    af18:    00
+    -    af19:    c6 44 24 47 00           movb    $0x0,0x47(%rsp)
+    -    af1e:    c7 44 24 24 00 00 00 00  movl    $0x0,0x24(%rsp)
+    +    af03:    c7 44 24 24 00 00 00 00  movl    $0x0,0x24(%rsp)
+    +    af0b:    48 83 c2 10              add     $0x10,%rdx
+    +    af0f:    48 83 c1 10              add     $0x10,%rcx
+    +    af13:    48 81 7c 24 08 ff ff ff  cmpq    $0xffffff,0x8(%rsp)
+    +    af1b:    00
+    +    af1c:    c6 44 24 47 00           movb    $0x0,0x47(%rsp)
+    +    af21:    c6 44 24 67 00           movb    $0x0,0x67(%rsp)
+         af26:    4c 8d bc 24 28 03 00 00  lea     0x328(%rsp),%r15
+         af2e:    48 89 44 24 10           mov     %rax,0x10(%rsp)
+         af33:    48 89 54 24 78           mov     %rdx,0x78(%rsp)
+

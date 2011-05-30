@@ -117,6 +117,10 @@ OptionParser.new do |opts|
   end
 end.parse!
 
+if !File.exist?("/dev/kvm")
+    $stderr.puts "\n************* WARNING: kvm not loaded, this will probably not work out\n\n"
+end
+
 base_dir = Pathname.new(__FILE__).expand_path.dirname.parent
 libexec_dir = base_dir + 'libexec'
 
