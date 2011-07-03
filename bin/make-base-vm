@@ -63,7 +63,13 @@ fi
 
 rm -rf $OUT
 
-sudo vmbuilder kvm ubuntu --arch=$ARCH --suite=$SUITE --addpkg=openssh-server,pciutils,build-essential,git-core,subversion --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=$MIRROR --security-mirror=$SECURITY_MIRROR --dest=$OUT --flavour=virtual --firstboot=`pwd`/target-bin/bootstrap-fixup
+FLAVOUR=virtual
+
+if [ $ARCH = "amd64" -a $SUITE = "hardy" ]; then
+  FLAVOUR=server
+fi
+
+sudo vmbuilder kvm ubuntu --arch=$ARCH --suite=$SUITE --addpkg=openssh-server,pciutils,build-essential,git-core,subversion --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=$MIRROR --security-mirror=$SECURITY_MIRROR --dest=$OUT --flavour=$FLAVOUR --firstboot=`pwd`/target-bin/bootstrap-fixup
 
 mv $OUT/*.qcow2 $OUT.qcow2
 
