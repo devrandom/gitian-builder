@@ -5,7 +5,7 @@ require 'yaml'
 require 'fileutils'
 require 'pathname'
 
-@options = {}
+@options = {:num_procs => 2, :memory => 2000}
 
 @bitness = {
   'i386' => 32,
@@ -83,7 +83,7 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
     script.puts "set -e"
     script.puts "export OUTDIR=$HOME/out"
     script.puts "GBUILD_BITS=#{bits}"
-    script.puts "MAKEOPTS=(-j2)"
+    script.puts "MAKEOPTS=(-j#{@options[:num_procs]})"
     (ref_date, ref_time) = reference_datetime.split
     script.puts "REFERENCE_DATETIME='#{reference_datetime}'"
     script.puts "REFERENCE_DATE='#{ref_date}'"
@@ -112,6 +112,12 @@ OptionParser.new do |opts|
   opts.on("-q", "--quiet", "be quiet") do |v|
     @options[:quiet] = v
   end
+  opts.on("-j PROCS", "--num-make PROCS", "number of processes to use") do |v|
+    @options[:num_procs] = v
+  end
+  opts.on("-m MEM", "--memory MEM", "memory to allocate in MiB") do |v|
+    @options[:memory] = v
+  end
   opts.on("-c PAIRS", "--commit PAIRS", "comma separated list of DIRECTORY=COMMIT pairs") do |v|
     @options[:commit] = v
   end
@@ -126,6 +132,8 @@ libexec_dir = base_dir + 'libexec'
 
 ENV['PATH'] = libexec_dir.to_s + ":" + ENV['PATH']
 ENV['GITIAN_BASE'] = base_dir.to_s
+ENV['NPROCS'] = @options[:num_procs].to_s
+ENV['VMEM'] = @options[:memory].to_s
 
 build_desc_file = ARGV.shift or raise "must supply YAML build description file"
 
