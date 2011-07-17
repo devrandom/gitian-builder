@@ -3,6 +3,7 @@
 . gconfig
 
 TUSER=ubuntu
+QUIET_FLAG=
 
 usage() {
   echo "Usage: ${0##*/} [OPTION]... <command>"
@@ -25,6 +26,10 @@ if [ $# != 0 ] ; then
         TUSER="$2"
         shift 2
         ;;
+      --quiet|-q)
+        QUIET_FLAG="-q"
+        shift 1
+        ;;
       --*)
         echo "unrecognized option $1"
         exit 1
@@ -41,4 +46,4 @@ if [ $# = 0 ] ; then
   exit 1
 fi
 
-scp -oConnectTimeout=5 -oNoHostAuthenticationForLocalhost=yes -i ${GITIAN_BASE:-.}/var/id_dsa -P $VM_SSH_PORT -r $TUSER@localhost:$1 $2
+scp $QUIET_FLAG -oConnectTimeout=5 -oNoHostAuthenticationForLocalhost=yes -i ${GITIAN_BASE:-.}/var/id_dsa -P $VM_SSH_PORT -r $TUSER@localhost:$1 $2

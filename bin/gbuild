@@ -64,7 +64,7 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
 
   build_desc["files"].each do |filename|
     filename = sanitize(filename, "files section")
-    system! "cd inputs && copy-to-target #{filename} build/"
+    system! "cd inputs && copy-to-target #{@quiet_flag} #{filename} build/"
   end
 
   info "Updating apt-get repository (log in var/install.log)"
@@ -134,6 +134,7 @@ ENV['PATH'] = libexec_dir.to_s + ":" + ENV['PATH']
 ENV['GITIAN_BASE'] = base_dir.to_s
 ENV['NPROCS'] = @options[:num_procs].to_s
 ENV['VMEM'] = @options[:memory].to_s
+@quiet_flag = @options[:quiet] ? "-q" : ""
 
 build_desc_file = ARGV.shift or raise "must supply YAML build description file"
 
@@ -192,7 +193,7 @@ suites.each do |suite|
     build_one_configuration(suite, arch, build_desc, reference_datetime)
 
     info "Grabbing results"
-    system! "copy-from-target out #{build_dir}"
+    system! "copy-from-target #{@quiet_flag} out #{build_dir}"
 
     base_manifest = File.read("var/base-#{suite}-#{arch}.manifest")
     base_manifests["#{suite}-#{arch}"] = base_manifest
