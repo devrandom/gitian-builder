@@ -357,11 +357,11 @@ for root, dirs, files in os.walk(unpack_dir, topdown = True):
     for f in files:
         shutil.copy2(path.join(root, f), path.join(dest_path, rel, f))
 
-removed = set(old_manifest['sums'].keys()).difference(out_manifest['sums'].keys())
-
-for f in removed:
-    if path.exists(path.join(dest_path, f)):
-        os.unlink(path.join(dest_path, f))
+if old_manifest:
+    removed = set(old_manifest['sums'].keys()).difference(out_manifest['sums'].keys())
+    for f in removed:
+        if path.exists(path.join(dest_path, f)):
+            os.unlink(path.join(dest_path, f))
 
 f = file(path.join(dest_path, '.gitian-manifest'), 'w')
 yaml.dump(out_manifest, f)
