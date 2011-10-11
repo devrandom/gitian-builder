@@ -26,6 +26,7 @@ import urllib2
 import libxml2
 import argparse
 import yaml
+from hashlib import sha256
 from zipfile import ZipFile
 from distutils.version import LooseVersion
 
@@ -34,6 +35,16 @@ injected_config = """INJECTCONFIG"""
 have_injected_config = injected_config != inject_config_string
 
 quiet = 0
+
+def sha256sum(path):
+    h = sha256()
+    f = open(path)
+    while True:
+        buf = f.read(10240)
+        if buf == "":
+            break
+        h.update(buf)
+    return h.hexdigest()
 
 def sanitize_path(dir_name, name, where):
     if re.search(r'[^/\w.-]', name):
@@ -94,8 +105,7 @@ def get_assertions(temp_dir, unpack_dir, file_names):
     release = None
     to_check = {}
     for file_name in file_names:
-        shasum = subprocess.Popen(["sha256sum", '-b', os.path.join(unpack_dir, file_name)], stdout=subprocess.PIPE).communicate()[0][0:64]
-        sums[file_name] = shasum
+        sums[file_name] = sha256sum(os.path.join(unpack_dir, file_name))
         to_check[file_name] = 1
 
     out_manifest = False

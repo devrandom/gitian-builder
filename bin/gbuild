@@ -31,6 +31,8 @@ def info(str)
 end
 
 def build_one_configuration(suite, arch, build_desc, reference_datetime)
+  FileUtils.rm_f("var/build.log")
+
   bits = @bitness[arch] or raise "unknown architecture ${arch}"
   suitearch = "#{suite}-#{arch}"
 
