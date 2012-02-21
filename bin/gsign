@@ -58,6 +58,7 @@ in_sums = []
 result_dir = 'result'
 
 package_name = build_desc["name"] or raise "must supply name"
+optionals = build_desc["optionals"] or []
 package_name = sanitize(package_name, "package name")
 
 result_file = "#{package_name}-res.yml"
@@ -72,6 +73,7 @@ release = sanitize(release, "release")
 result['release'] = release
 result['name'] = package_name
 result['type'] = 'build'
+result['optionals'] = optionals
 
 signer = @options[:signer] or raise "must supply signer with --signer"
 

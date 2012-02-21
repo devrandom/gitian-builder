@@ -110,6 +110,7 @@ def get_assertions(temp_dir, unpack_dir, file_names):
 
     out_manifest = False
     error = False
+    optionals = None
 
     for file_name in file_names:
         if file_name.startswith("gitian"):
@@ -130,24 +131,29 @@ def get_assertions(temp_dir, unpack_dir, file_names):
                 f.close()
                 if assertion['out_manifest']:
                     if out_manifest:
-                        if out_manifest != assertion['out_manifest'] or release != assertion['release'] or name != assertion['name']:
-                            print>>sys.stderr, 'not all out manifests/releases/names are identical'
+                        if out_manifest != assertion['out_manifest'] or release != assertion['release'] or name != assertion['name'] or optionals != assertion.get('optionals', []):
+                            print>>sys.stderr, 'not all out manifests/releases/names/optionals are identical'
                             error = True
                             continue
                     else:
                         out_manifest = assertion['out_manifest']
                         release = assertion['release']
                         name = assertion['name']
+                        optionals = assertion.get('optionals', [])
 
     if out_manifest:
         for line in out_manifest.split("\n"):
             if line != "":
                 shasum = line[0:64]
                 summed_file = line[66:]
-                if sums[summed_file] != shasum:
+                if not sums.has_key(summed_file):
+                    if not summed_file in optionals:
+                        print>>sys.stderr, "missing file %s" %(summed_file)
+                        error = True
+                elif sums[summed_file] != shasum:
                     print>>sys.stderr, "sha256sum mismatch on %s" %(summed_file)
                     error = True
-                del to_check[summed_file]
+                    del to_check[summed_file]
         if len(to_check) > 0 and quiet == 0:
             print>>sys.stderr, "Some of the files were not checksummed:"
             for key in to_check:
@@ -156,7 +162,7 @@ def get_assertions(temp_dir, unpack_dir, file_names):
         print>>sys.stderr, 'No build assertions found'
         error = True
 
-    manifest = { 'sums' : sums, 'release' : release, 'name': name }
+    manifest = { 'sums' : sums, 'release' : release, 'name': name, 'optionals': optionals }
     return (not error, assertions, manifest)
 
 def import_keys(temp_dir, config):
