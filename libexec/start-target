@@ -5,8 +5,11 @@
 ARCH=qemu$1
 SUFFIX=$2
 
-kvm -cpu $ARCH -m ${VMEM:-2000} -smp ${NPROCS:-2} -drive file=target-$SUFFIX.qcow2 -net nic,model=virtio -net user,hostfwd=tcp:127.0.0.1:$VM_SSH_PORT-:22 -vnc 127.0.0.1:16 > var/target.log 2>&1 &
-
-echo $! > var/target.pid
-wait
-rm var/target.pid
+if [ -z "$USE_LXC" ]; then
+    kvm -cpu $ARCH -m ${VMEM:-2000} -smp ${NPROCS:-2} -drive file=target-$SUFFIX.qcow2 -net nic,model=virtio -net user,hostfwd=tcp:127.0.0.1:$VM_SSH_PORT-:22 -vnc 127.0.0.1:16 > var/target.log 2>&1 &
+    echo $! > var/target.pid
+    wait
+    rm var/target.pid
+else
+    true #sudo lxc-start -n gitian -c var/target.log -f lxc.config
+fi

@@ -12,17 +12,30 @@ This performs a build inside a VM, with deterministic inputs and outputs.  If th
 
 Install prereqs:
 
-    sudo apt-get install python-vm-builder qemu-kvm apt-cacher
+    sudo apt-get install apt-cacher
     sudo service apt-cacher start
+
+If you want to use kvm:
+    sudo apt-get install python-vm-builder qemu-kvm
+
+or alternatively, lxc (no need for hardware support):
+    sudo apt-get install debootstrap lxc
 
 Create the base VM for use in further builds (requires sudo, please review the script):
 
     bin/make-base-vm
+    bin/make-base-vm --arch i386
+
+or for lxc:
+
+    bin/make-base-vm --lxc
+    bin/make-base-vm --lxc --arch i386
 
 Copy any additional build inputs into a directory named _inputs_.
 
 Then execute the build using a YAML description file (can be run as non-root):
 
+    export USE_LXC=1 # LXC only
     bin/gbuild <package>.yml
 
 or if you need to specify a commit for one of the git remotes:

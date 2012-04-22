@@ -22,7 +22,7 @@ def sanitize(str, where)
 end
 
 def sanitize_path(str, where)
-  raise "unsanitary string in #{where}" if (str =~ /[^\w\/.-]/)
+  raise "unsanitary string in #{where}" if (str =~ /[^\w\/.:-]/)
   str
 end
 
@@ -34,6 +34,12 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
   FileUtils.rm_f("var/build.log")
 
   bits = @bitness[arch] or raise "unknown architecture ${arch}"
+
+  if ENV["USE_LXC"]
+      ENV["LXC_ARCH"] = arch
+      ENV["LXC_SUITE"] = suite
+  end
+
   suitearch = "#{suite}-#{arch}"
 
   info "Stopping target if it is up"
@@ -43,7 +49,7 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
 
   unless @options[:skip_image]
     info "Making a new image copy"
-    system! "cp base-#{suitearch}.qcow2 target-#{suitearch}.qcow2"
+    system! "make-clean-vm --suite #{suite} --arch #{arch}"
   end
 
   info "Starting target"
@@ -66,7 +72,7 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
 
   build_desc["files"].each do |filename|
     filename = sanitize(filename, "files section")
-    system! "cd inputs && copy-to-target #{@quiet_flag} #{filename} build/"
+    system! "copy-to-target #{@quiet_flag} inputs/#{filename} build/"
   end
 
   info "Updating apt-get repository (log in var/install.log)"
@@ -92,8 +98,14 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
     script.puts "REFERENCE_TIME='#{ref_time}'"
     script.puts
     build_desc["remotes"].each do |remote|
-      script.puts "git clone -q #{remote["url"]} build/#{remote["dir"]}"
-      script.puts "(cd build/#{remote["dir"]} && git checkout -q #{remote["commit"]})"
+      dir = sanitize(remote["dir"], remote["dir"])
+      if File.exist?("inputs/#{dir}")
+          system!("cd inputs/#{dir} && git fetch")
+      else
+          system!("git clone -q #{sanitize_path(remote["url"], remote["url"])} inputs/#{dir}")
+      end
+      system! "copy-to-target #{@quiet_flag} inputs/#{dir} build/"
+      script.puts "(cd build/#{dir} && git checkout -q #{remote["commit"]})"
     end
     script.puts "cd build"
     script.puts build_desc["script"]

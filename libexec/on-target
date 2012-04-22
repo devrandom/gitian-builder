@@ -41,4 +41,13 @@ fi
 #  exit 1
 #fi
 
-ssh -oConnectTimeout=5 -oNoHostAuthenticationForLocalhost=yes -i ${GITIAN_BASE:-.}/var/id_dsa -p $VM_SSH_PORT $TUSER@localhost $*
+if [ -z "$USE_LXC" ]; then
+    ssh -oConnectTimeout=5 -oNoHostAuthenticationForLocalhost=yes -i ${GITIAN_BASE:-.}/var/id_dsa -p $VM_SSH_PORT $TUSER@localhost $*
+else
+    config-lxc
+    if [ $TUSER = "root" ]; then
+        sudo lxc-start -n gitian -f var/lxc.config -- $*
+    else
+        sudo lxc-start -n gitian -f var/lxc.config -- sudo -i -u $TUSER $*
+    fi
+fi

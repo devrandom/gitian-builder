@@ -5,6 +5,7 @@ SUITE=lucid
 ARCH=amd64
 MIRROR=http://${MIRROR_HOST:-127.0.0.1}:3142/archive.ubuntu.com/ubuntu
 SECURITY_MIRROR=http://${MIRROR_HOST:-127.0.0.1}:3142/security.ubuntu.com/ubuntu
+LXC=0
 
 usage() {
   echo "Usage: ${0##*/} [OPTION]..."
@@ -12,8 +13,9 @@ usage() {
   echo
   cat << EOF
   --help     display this help and exit
-  --suite=U  build suite U instead of lucid
-  --arch=A   build architecture A (e.g. i386) instead of amd64
+  --suite U  build suite U instead of lucid
+  --arch A   build architecture A (e.g. i386) instead of amd64
+  --lxc      use lxc instead of kvm
 
   The MIRROR_HOST environment variable can be used to change the
   apt-cacher host.  It should be something that the target VM can
@@ -38,6 +40,10 @@ if [ $# != 0 ] ; then
         ARCH="$2"
         shift 2
         ;;
+      --lxc)
+        LXC=1
+        shift 1
+        ;;
       --*)
         echo "unrecognized option $1"
         exit 1
@@ -56,21 +62,32 @@ if [ ! -e var/id_dsa ]; then
 fi
 
 OUT=base-$SUITE-$ARCH
-if [ -e $OUT.qcow2 ]; then
-  echo $OUT.qcow2 already exists, please remove it first
-  exit 1
-fi
-
-rm -rf $OUT
-
 FLAVOUR=virtual
 
 if [ $ARCH = "amd64" -a $SUITE = "hardy" ]; then
   FLAVOUR=server
 fi
 
-sudo vmbuilder kvm ubuntu --arch=$ARCH --suite=$SUITE --addpkg=openssh-server,pciutils,build-essential,git-core,subversion --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=$MIRROR --security-mirror=$SECURITY_MIRROR --dest=$OUT --flavour=$FLAVOUR --firstboot=`pwd`/target-bin/bootstrap-fixup
+addpkg=openssh-server,pciutils,build-essential,git-core,subversion
 
-mv $OUT/*.qcow2 $OUT.qcow2
+if [ $LXC = "0" ]; then
+    if [ -e $OUT.qcow2 ]; then
+      echo $OUT.qcow2 already exists, please remove it first
+      exit 1
+    fi
 
-rm -rf $OUT
+    rm -rf $OUT
+    sudo vmbuilder kvm ubuntu --arch=$ARCH --suite=$SUITE --addpkg=$addpkg --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=$MIRROR --security-mirror=$SECURITY_MIRROR --dest=$OUT --flavour=$FLAVOUR --firstboot=`pwd`/target-bin/bootstrap-fixup
+    mv $OUT/*.qcow2 $OUT.qcow2
+    rm -rf $OUT
+else
+    if [ -e $OUT ]; then
+      echo $OUT already exists, please remove it first
+      exit 1
+    fi
+
+    rm -rf $OUT-root
+    sudo debootstrap --include=$addpkg --arch=$ARCH $SUITE $OUT-root $MIRROR
+    sudo target-bin/bootstrap-fixup $OUT-root
+fi
+
