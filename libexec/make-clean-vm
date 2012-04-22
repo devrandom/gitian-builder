@@ -41,13 +41,12 @@ if [ $# != 0 ] ; then
   done
 fi
 
-BASE=base-$SUITE-$ARCH-root
-OUT=target-$SUITE-$ARCH-root
+BASE=base-$SUITE-$ARCH
+OUT=target-$SUITE-$ARCH
 
 if [ -z "$USE_LXC" ]; then
     qemu-img create -f qcow2 -o backing_file="$BASE.qcow2" "$OUT.qcow2"
 else
-    sudo rm -rf $OUT
-    sudo cp -a $BASE $OUT
-    on-target -u root useradd -m ubuntu
+    cp -a $BASE $OUT
+    on-target -u root bash < target-bin/bootstrap-fixup
 fi

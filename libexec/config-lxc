@@ -1,4 +1,4 @@
 #!/bin/bash
 
 wd=`pwd`
-sed "s;ROOTFS;$wd/target-$LXC_SUITE-$LXC_ARCH-root;;s;ARCH;$LXC_ARCH;g" < etc/lxc.config.in > var/lxc.config
+sed "s;ROOTFS;$wd/target-$LXC_SUITE-$LXC_ARCH;;s;ARCH;$LXC_ARCH;g" < etc/lxc.config.in > var/lxc.config

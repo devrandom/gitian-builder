@@ -70,24 +70,25 @@ fi
 
 addpkg=openssh-server,pciutils,build-essential,git-core,subversion
 
-if [ $LXC = "0" ]; then
-    if [ -e $OUT.qcow2 ]; then
-      echo $OUT.qcow2 already exists, please remove it first
-      exit 1
-    fi
+if [ -e $OUT.qcow2 ]; then
+  echo $OUT.qcow2 already exists, please remove it first
+  exit 1
+fi
 
-    rm -rf $OUT
-    sudo vmbuilder kvm ubuntu --arch=$ARCH --suite=$SUITE --addpkg=$addpkg --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=$MIRROR --security-mirror=$SECURITY_MIRROR --dest=$OUT --flavour=$FLAVOUR --firstboot=`pwd`/target-bin/bootstrap-fixup
-    mv $OUT/*.qcow2 $OUT.qcow2
-    rm -rf $OUT
-else
-    if [ -e $OUT ]; then
-      echo $OUT already exists, please remove it first
-      exit 1
-    fi
+rm -rf $OUT
+sudo vmbuilder kvm ubuntu --arch=$ARCH --suite=$SUITE --addpkg=$addpkg --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=$MIRROR --security-mirror=$SECURITY_MIRROR --dest=$OUT --flavour=$FLAVOUR --firstboot=`pwd`/target-bin/bootstrap-fixup
+mv $OUT/*.qcow2 $OUT.qcow2
+rm -rf $OUT
 
-    rm -rf $OUT-root
-    sudo debootstrap --include=$addpkg --arch=$ARCH $SUITE $OUT-root $MIRROR
-    sudo target-bin/bootstrap-fixup $OUT-root
+if [ $LXC = "1" ]; then
+    #sudo debootstrap --include=$addpkg --arch=$ARCH $SUITE $OUT-root $MIRROR
+    echo Extracting partition for lxc
+    qemu-img convert $OUT.qcow2 $OUT.raw
+    loop=`sudo kpartx -av $OUT.raw|sed -n '/loop\(.\)p1/ i\1'`
+    sudo cp --sparse=always /dev/mapper/loop${loop}p1 $OUT
+    sudo chown $USER $OUT
+    sudo kpartx -d /dev/loop$loop
+    rm -f $OUT.raw
+    # bootstrap-fixup is done in libexec/make-clean-vm
 fi
 
