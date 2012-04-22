@@ -66,3 +66,18 @@ After you've merged everybody's signatures, verify them:
 TODO:
 - disable sudo in target, just in case of a hypervisor exploit
 - tar and other archive timestamp setter
+
+## LXC tips
+
+`bin/gbuild` runs `lxc-start`, which may require root.  If you are in the admin group, you can add the following sudoers line to prevent asking for the password every time:
+
+    %admin ALL=NOPASSWD: /usr/bin/lxc-start
+
+Recent distributions allow lxc-start to be run by non-priviledged users, so you might be able to rip-out the `sudo` calls in `libexec/*`.
+
+If you have a runaway `lxc-start` command, just use `kill -9` on it.
+
+The machine configuration requires access to br0 and assumes that the host address is 10.0.2.2:
+
+    sudo brctl add br0
+    sudo ifconfig br0 10.0.2.2/24 up
