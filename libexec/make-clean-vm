@@ -45,7 +45,7 @@ BASE=base-$SUITE-$ARCH-root
 OUT=target-$SUITE-$ARCH-root
 
 if [ -z "$USE_LXC" ]; then
-    cp $BASE.qcow2 $OUT.qcow2
+    qemu-img create -f qcow2 -o backing_file="$BASE.qcow2" "$OUT.qcow2"
 else
     sudo rm -rf $OUT
     sudo cp -a $BASE $OUT
