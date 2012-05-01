@@ -105,7 +105,7 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
           system!("git clone -q #{sanitize_path(remote["url"], remote["url"])} inputs/#{dir}")
       end
       system! "copy-to-target #{@quiet_flag} inputs/#{dir} build/"
-      script.puts "(cd build/#{dir} && git checkout -q #{remote["commit"]})"
+      script.puts "(cd build/#{dir} && git checkout -q #{remote["commit"]} && git reset -q --hard)"
     end
     script.puts "cd build"
     script.puts build_desc["script"]
