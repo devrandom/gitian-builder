@@ -84,7 +84,7 @@ if [ $LXC = "1" ]; then
     #sudo debootstrap --include=$addpkg --arch=$ARCH $SUITE $OUT-root $MIRROR
     echo Extracting partition for lxc
     qemu-img convert $OUT.qcow2 $OUT.raw
-    loop=`sudo kpartx -av $OUT.raw|sed -n '/loop\(.\)p1/ i\1'`
+    loop=`sudo kpartx -av $OUT.raw|sed -n '/loop.p1/{s/.*loop\(.\)p1.*/\1/;p}'`
     sudo cp --sparse=always /dev/mapper/loop${loop}p1 $OUT
     sudo chown $USER $OUT
     sudo kpartx -d /dev/loop$loop
