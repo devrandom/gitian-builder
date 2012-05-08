@@ -22,7 +22,7 @@ def sanitize(str, where)
 end
 
 def sanitize_path(str, where)
-  raise "unsanitary string in #{where}" if (str =~ /[^\w\/.:-]/)
+  raise "unsanitary string in #{where}" if (str =~ /[^\w\/.:+-]/)
   str
 end
 
