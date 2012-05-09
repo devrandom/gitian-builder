@@ -99,20 +99,15 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
     script.puts
     build_desc["remotes"].each do |remote|
       dir = sanitize(remote["dir"], remote["dir"])
-      if File.exist?("inputs/#{dir}")
-          system!("cd inputs/#{dir} && git fetch")
-      else
-          system!("git clone -q #{sanitize_path(remote["url"], remote["url"])} inputs/#{dir}")
-      end
       system! "copy-to-target #{@quiet_flag} inputs/#{dir} build/"
-      script.puts "(cd build/#{dir} && git checkout -q #{remote["commit"]} && git reset -q --hard)"
+      script.puts "(cd build/#{dir} && git reset -q --hard && git clean -q -f -d)"
     end
     script.puts "cd build"
     script.puts build_desc["script"]
   end
 
   info "Running build script (log in var/build.log)"
-  system! "on-target bash < var/build-script > var/build.log 2>&1"
+  system! "on-target bash -x < var/build-script > var/build.log 2>&1"
 end
 
 ################################
@@ -193,6 +188,16 @@ build_desc["remotes"].each do |remote|
     remote["commit"] = commits[remote["dir"]]
     raise "must specify a commit for directory #{remote["dir"]}" unless remote["commit"]
   end
+  dir = sanitize(remote["dir"], remote["dir"])
+  unless File.exist?("inputs/#{dir}")
+      system!("git init inputs/#{dir}")
+      system!("cd inputs/#{dir} && git remote add origin #{sanitize_path(remote["url"], remote["url"])}")
+  end
+  system!("cd inputs/#{dir} && git fetch --tags")
+  commit = sanitize(remote["commit"], remote["commit"])
+  commit = `cd inputs/#{dir} && git log --format=%H -1 #{commit}`.strip
+  system!("cd inputs/#{dir} && git checkout -q #{commit}")
+  in_sums << "git:#{commit} #{dir}"
 end
 
 base_manifests = YAML::Omap.new
