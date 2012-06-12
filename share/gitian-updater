@@ -23,7 +23,6 @@ import re
 import tempfile
 import atexit
 import urllib2
-import libxml2
 import argparse
 import yaml
 from hashlib import sha256
@@ -300,24 +299,26 @@ package_file = path.join(temp_dir, 'package')
 
 downloaded = False
 
-for rss in rsses:
-    try:
-        feed = libxml2.parseDoc(urllib2.urlopen(rss['url']).read())
-        url = None
-        for node in feed.xpathEval(rss['xpath']):
-            if re.search(rss['pattern'], str(node)):
-                url = str(node)
-                break
+if rsses:
+    import libxml2
+    for rss in rsses:
         try:
-            download(url, package_file)
-            downloaded = True
-            break
+            feed = libxml2.parseDoc(urllib2.urlopen(rss['url']).read())
+            url = None
+            for node in feed.xpathEval(rss['xpath']):
+                if re.search(rss['pattern'], str(node)):
+                    url = str(node)
+                    break
+            try:
+                download(url, package_file)
+                downloaded = True
+                break
+            except:
+                print>>sys.stderr, "could not download from %s, trying next rss"%(url)
+                pass
         except:
-            print>>sys.stderr, "could not download from %s, trying next rss"%(url)
+            print>>sys.stderr, "could read not from rss %s"%(rss)
             pass
-    except:
-        print>>sys.stderr, "could read not from rss %s"%(rss)
-        pass
 
 if not downloaded:
     for url in urls:
