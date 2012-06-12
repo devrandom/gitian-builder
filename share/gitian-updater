@@ -98,7 +98,7 @@ def extract(dir_name, zip_path):
             files.append(path.normpath(name))
     return files
 
-def get_assertions(temp_dir, unpack_dir, file_names):
+def get_assertions(gpg_path, temp_dir, unpack_dir, file_names):
     assertions = {"build" : {}}
     sums = {}
     name = None
@@ -116,7 +116,7 @@ def get_assertions(temp_dir, unpack_dir, file_names):
         if file_name.startswith("gitian"):
             del to_check[file_name]
             if file_name.endswith(".assert"):
-                popen = subprocess.Popen(["gpg", '--status-fd', '1', '--homedir', path.join(temp_dir, 'gpg'), '--verify', os.path.join(unpack_dir, file_name + '.sig'), os.path.join(unpack_dir, file_name)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                popen = subprocess.Popen([gpg_path, '--status-fd', '1', '--homedir', path.join(temp_dir, 'gpg'), '--verify', os.path.join(unpack_dir, file_name + '.sig'), os.path.join(unpack_dir, file_name)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 gpgout = popen.communicate()[0]
                 retcode = popen.wait()
                 if retcode != 0:
@@ -165,13 +165,13 @@ def get_assertions(temp_dir, unpack_dir, file_names):
     manifest = { 'sums' : sums, 'release' : release, 'name': name, 'optionals': optionals }
     return (not error, assertions, manifest)
 
-def import_keys(temp_dir, config):
+def import_keys(gpg_path, temp_dir, config):
     gpg_dir = path.join(temp_dir, 'gpg')
     os.mkdir(gpg_dir, 0700)
     signers = config['signers']
     for keyid in signers:
         key_path = path.join('gitian', signers[keyid]['key'] + '-key.pgp')
-        popen = subprocess.Popen(['gpg', '--status-fd', '1', '--homedir', gpg_dir, '--import', path.join(temp_dir, 'unpack', key_path)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        popen = subprocess.Popen([gpg_path, '--status-fd', '1', '--homedir', gpg_dir, '--import', path.join(temp_dir, 'unpack', key_path)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         gpgout = popen.communicate(signers[keyid]['key'])[0]
         if popen.wait() != 0:
             print>>sys.stderr, 'Key %s failed to import'%(keyid)
@@ -236,6 +236,7 @@ parser.add_argument('-d', '--dest', metavar='DEST', type=str, required=False,
 parser.add_argument('-q', '--quiet', action='append_const', const=1, default=[], help='be quiet')
 parser.add_argument('-f', '--force', action='store_true', help='force downgrades and such')
 parser.add_argument('-m', '--customize', metavar='OUTPUT', type=str, help='generate a customized version of the script with the given config')
+parser.add_argument('-g', '--gpg', metavar='GPG', type=str, help='path to GnuPG')
 
 args = parser.parse_args()
 
@@ -264,6 +265,11 @@ dest_path = args.dest
 
 if not dest_path:
     parser.error('argument -d/--dest is required unless -m is specified')
+
+gpg_path = args.gpg
+
+if not gpg_path:
+    gpg_path = 'gpg'
 
 rsses = []
 
@@ -336,9 +342,9 @@ if not downloaded:
 unpack_dir = path.join(temp_dir, 'unpack')
 files = extract(unpack_dir, package_file)
 
-import_keys(temp_dir, config)
+import_keys(gpg_path, temp_dir, config)
 
-(success, assertions, out_manifest) = get_assertions(temp_dir, unpack_dir, files)
+(success, assertions, out_manifest) = get_assertions(gpg_path, temp_dir, unpack_dir, files)
 
 if old_manifest:
     if out_manifest['name'] != old_manifest['name']:
