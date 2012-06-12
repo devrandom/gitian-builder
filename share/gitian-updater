@@ -253,7 +253,7 @@ if args.config:
         s.write(script)
         s.close()
         os.chmod(args.customize, 0750)
-        exit(0)
+        sys.exit(0)
 
     config = yaml.safe_load(f)
     f.close()
@@ -287,7 +287,7 @@ if path.exists(dest_path):
 
     if not files.count('.gitian-manifest') and len(files) > 0:
         print>>sys.stderr, "destination already exists, no .gitian-manifest and directory not empty. Please empty destination."
-        exit(1)
+        sys.exit(1)
     f = file(os.path.join(dest_path,'.gitian-manifest'), 'r')
     old_manifest = yaml.load(f, OrderedDictYAMLLoader)
     f.close()
@@ -331,7 +331,7 @@ if not downloaded:
 
 if not downloaded:
     print>>sys.stderr, "out of places to download from, try later"
-    exit(1)
+    sys.exit(1)
 
 unpack_dir = path.join(temp_dir, 'unpack')
 files = extract(unpack_dir, package_file)
@@ -343,10 +343,10 @@ import_keys(temp_dir, config)
 if old_manifest:
     if out_manifest['name'] != old_manifest['name']:
         print>>sys.stderr, "The old directory has a manifest for a different package"
-        exit(1)
+        sys.exit(1)
     if LooseVersion(out_manifest['release']) < LooseVersion(old_manifest['release']) and not args.force:
         print>>sys.stderr, "This would downgrade from version %s to %s"%(old_manifest['release'],out_manifest['release'])
-        exit(1)
+        sys.exit(1)
     elif LooseVersion(out_manifest['release']) == LooseVersion(old_manifest['release']):
         if quiet <= 1:
             print>>sys.stderr, "This is a reinstall of version %s"%(old_manifest['release'])
@@ -360,7 +360,7 @@ if not success and quiet <= 1:
 total_weight = check_assertions(config, assertions)
 if not total_weight:
     print>>sys.stderr, "There were errors checking assertions, build is untrusted, aborting"
-    exit(1)
+    sys.exit(1)
 
 if quiet == 0:
     print>>sys.stderr, "Successful with signature weight %d"%(total_weight)
