@@ -338,7 +338,7 @@ if not downloaded:
 
 if not downloaded:
     print>>sys.stderr, "out of places to download from, try later"
-    sys.exit(1)
+    sys.exit(2)
 
 unpack_dir = path.join(temp_dir, 'unpack')
 files = extract(unpack_dir, package_file)
@@ -350,10 +350,10 @@ import_keys(gpg_path, temp_dir, config)
 if old_manifest:
     if out_manifest['name'] != old_manifest['name']:
         print>>sys.stderr, "The old directory has a manifest for a different package"
-        sys.exit(1)
+        sys.exit(3)
     if LooseVersion(out_manifest['release']) < LooseVersion(old_manifest['release']) and not args.force:
         print>>sys.stderr, "This would downgrade from version %s to %s"%(old_manifest['release'],out_manifest['release'])
-        sys.exit(1)
+        sys.exit(4)
     elif LooseVersion(out_manifest['release']) == LooseVersion(old_manifest['release']):
         if quiet <= 1:
             print>>sys.stderr, "This is a reinstall of version %s"%(old_manifest['release'])
@@ -367,7 +367,7 @@ if not success and quiet <= 1:
 total_weight = check_assertions(config, assertions)
 if not total_weight:
     print>>sys.stderr, "There were errors checking assertions, build is untrusted, aborting"
-    sys.exit(1)
+    sys.exit(5)
 
 if quiet == 0:
     print>>sys.stderr, "Successful with signature weight %d"%(total_weight)
