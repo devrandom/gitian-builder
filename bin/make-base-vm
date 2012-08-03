@@ -70,13 +70,16 @@ fi
 
 addpkg=openssh-server,pciutils,build-essential,git-core,subversion
 
+# Remove cron to work around vmbuilder issue when umounting /dev on target
+removepkg=cron
+
 if [ -e $OUT.qcow2 ]; then
   echo $OUT.qcow2 already exists, please remove it first
   exit 1
 fi
 
 rm -rf $OUT
-sudo vmbuilder kvm ubuntu --arch=$ARCH --suite=$SUITE --addpkg=$addpkg --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=$MIRROR --security-mirror=$SECURITY_MIRROR --dest=$OUT --flavour=$FLAVOUR --firstboot=`pwd`/target-bin/bootstrap-fixup
+sudo vmbuilder kvm ubuntu --arch=$ARCH --suite=$SUITE --addpkg=$addpkg --removepkg=$removepkg --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=$MIRROR --security-mirror=$SECURITY_MIRROR --dest=$OUT --flavour=$FLAVOUR --firstboot=`pwd`/target-bin/bootstrap-fixup
 mv $OUT/*.qcow2 $OUT.qcow2
 rm -rf $OUT
 
