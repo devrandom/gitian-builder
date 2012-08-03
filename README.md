@@ -79,5 +79,5 @@ If you have a runaway `lxc-start` command, just use `kill -9` on it.
 
 The machine configuration requires access to br0 and assumes that the host address is 10.0.2.2:
 
-    sudo brctl add br0
+    sudo brctl addbr br0
     sudo ifconfig br0 10.0.2.2/24 up

@@ -193,7 +193,7 @@ build_desc["remotes"].each do |remote|
       system!("git init inputs/#{dir}")
       system!("cd inputs/#{dir} && git remote add origin #{sanitize_path(remote["url"], remote["url"])}")
   end
-  system!("cd inputs/#{dir} && git fetch --tags")
+  system!("cd inputs/#{dir} && git fetch && git fetch --tags")
   commit = sanitize(remote["commit"], remote["commit"])
   commit = `cd inputs/#{dir} && git log --format=%H -1 #{commit}`.strip
   system!("cd inputs/#{dir} && git checkout -q #{commit}")
