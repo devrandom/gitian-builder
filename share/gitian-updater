@@ -25,15 +25,70 @@ import atexit
 import urllib2
 import argparse
 import yaml
+import time
 from hashlib import sha256
 from zipfile import ZipFile
 from distutils.version import LooseVersion
+
+"""downloader config sample:
+
+    --- 
+    name: foo
+    urls:
+    - url: https://foo.org/gitian/foo.zip
+      version_url: https://foo.org/gitian/foo.ver
+    rss:
+    - url: https://foo.org/gitian/foo.rss
+      xpath: //item/link/text()
+      pattern: foo-(\d+.\d+.\d+)-linux.zip
+    signers:
+      0A82509767C7D4A5D14DA2301AE1D35043E08E54:
+        weight: 40
+        name: BlueMatt
+        key: bluematt
+
+"""
 
 inject_config_string = "INJECT" + "CONFIG"
 injected_config = """INJECTCONFIG"""
 have_injected_config = injected_config != inject_config_string
 
 quiet = 0
+
+def check_name_and_version(out_manifest, old_manifest):
+    if out_manifest['name'] != old_manifest['name']:
+        print>>sys.stderr, "The old directory has a manifest for a different package"
+        sys.exit(3)
+    if LooseVersion(out_manifest['release']) < LooseVersion(old_manifest['release']):
+        if quiet <= 1:
+            print>>sys.stderr, "This is a downgrade from version %s to %s"%(old_manifest['release'],out_manifest['release'])
+        if not args.force:
+            print>>sys.stderr, "Use --force if you really want to downgrade"
+            sys.exit(4)
+    elif LooseVersion(out_manifest['release']) == LooseVersion(old_manifest['release']):
+        if quiet <= 1:
+            print>>sys.stderr, "This is a reinstall of version %s"%(old_manifest['release'])
+    else:
+        if quiet == 0:
+            print>>sys.stderr, "Upgrading from version %s to %s"%(old_manifest['release'],out_manifest['release'])
+
+def copy_to_destination(from_path, to_path, out_manifest, old_manifest):
+    for root, dirs, files in os.walk(from_path, topdown = True):
+        rel = path.relpath(root, from_path)
+        if not path.exists(path.join(to_path, rel)):
+            os.mkdir(path.normpath(path.join(to_path, rel)))
+        for f in files:
+            shutil.copy2(path.join(root, f), path.join(to_path, rel, f))
+
+    if old_manifest:
+        removed = set(old_manifest['sums'].keys()).difference(out_manifest['sums'].keys())
+        for f in removed:
+            if path.exists(path.join(to_path, f)):
+                os.unlink(path.join(to_path, f))
+
+    f = file(path.join(to_path, '.gitian-manifest'), 'w')
+    yaml.dump(out_manifest, f)
+    f.close()
 
 def sha256sum(path):
     h = sha256()
@@ -159,7 +214,6 @@ def get_assertions(gpg_path, temp_dir, unpack_dir, file_names):
                 print>>sys.stderr, "  ", key
     else:
         print>>sys.stderr, 'No build assertions found'
-        error = True
 
     manifest = { 'sums' : sums, 'release' : release, 'name': name, 'optionals': optionals }
     return (not error, assertions, manifest)
@@ -198,7 +252,7 @@ def check_assertions(config, assertions):
         total_weight += signers[key]['weight']
     if total_weight < config['minimum_weight']:
         print>>sys.stderr, "The total weight of signatures is %d, which is less than the minimum required %d"%(total_weight, config['minimum_weight'])
-        return False
+        return None
     return total_weight
 
 
@@ -234,7 +288,9 @@ parser.add_argument('-d', '--dest', metavar='DEST', type=str, required=False,
                    help='the destination directory for unpacking')
 parser.add_argument('-q', '--quiet', action='append_const', const=1, default=[], help='be quiet')
 parser.add_argument('-f', '--force', action='store_true', help='force downgrades and such')
+parser.add_argument('-n', '--dryrun', action='store_true', help='do not actually copy to destination')
 parser.add_argument('-m', '--customize', metavar='OUTPUT', type=str, help='generate a customized version of the script with the given config')
+parser.add_argument('-w', '--wait', type=float, metavar='HOURS', help='observe a waiting period or use zero for no waiting')
 parser.add_argument('-g', '--gpg', metavar='GPG', type=str, help='path to GnuPG')
 parser.add_argument('-p', '--post', metavar='COMMAND', type=str, help='Run after a successful install')
 
@@ -266,6 +322,10 @@ dest_path = args.dest
 if not dest_path:
     parser.error('argument -d/--dest is required unless -m is specified')
 
+if args.wait is not None:
+    config['waiting_period'] = args.wait
+
+
 gpg_path = args.gpg
 
 if not gpg_path:
@@ -274,13 +334,13 @@ if not gpg_path:
 rsses = []
 
 if args.url:
-    urls = args.url
+    urls = [{ 'url' : url, 'version_url' : None} for url in args.url]
 else:
-    urls = config['urls']
-    if config.has_key('rss'):
-        rsses = config['rss']
+    urls = config.get('urls')
     if not urls:
         parser.error('argument -u/--url is required since config does not specify it')
+    if config.has_key('rss'):
+        rsses = config['rss']
 
 # TODO: rss, atom, etc.
 
@@ -298,6 +358,31 @@ if path.exists(dest_path):
     old_manifest = yaml.load(f, OrderedDictYAMLLoader)
     f.close()
 
+if config.get('waiting_period', 0) > 0:
+    waiting_file = path.join(dest_path, '.gitian-waiting')
+    if path.exists(waiting_file):
+        f = file(waiting_file, 'r')
+        waiting = yaml.load(f)
+        f.close()
+        wait_start = waiting['time']
+        out_manifest = waiting['out_manifest']
+        waiting_path = waiting['waiting_path']
+        wait_time = wait_start + config['waiting_period'] * 3600 - time.time()
+        if wait_time > 0:
+            print>>sys.stderr, "Waiting another %.2f hours before applying update in %s"%(wait_time / 3600, waiting_path)
+            sys.exit(100)
+        os.remove(waiting_file)
+        if args.dryrun:
+            print>>sys.stderr, "Dry run, not copying"
+        else:
+            copy_to_destination(path.join(waiting_path, 'unpack'), dest_path, out_manifest, old_manifest)
+            if args.post:
+                os.system(args.post)
+            if quiet == 0:
+                print>>sys.stderr, "Copied from waiting area to destination"
+        shutil.rmtree(waiting_path)
+        sys.exit(0)
+
 temp_dir = tempfile.mkdtemp('', prog)
 
 atexit.register(remove_temp, temp_dir)
@@ -305,6 +390,7 @@ atexit.register(remove_temp, temp_dir)
 package_file = path.join(temp_dir, 'package')
 
 downloaded = False
+checked = False
 
 if rsses:
     import libxml2
@@ -312,17 +398,28 @@ if rsses:
         try:
             feed = libxml2.parseDoc(urllib2.urlopen(rss['url']).read())
             url = None
+            release = None
+
+            # Find the first matching node
             for node in feed.xpathEval(rss['xpath']):
-                if re.search(rss['pattern'], str(node)):
+                m = re.search(rss['pattern'], str(node))
+                if m:
+                    if len(m.groups()) > 0:
+                        release = m.group(1)
                     url = str(node)
                     break
-            try:
-                download(url, package_file)
-                downloaded = True
-                break
-            except:
-                print>>sys.stderr, "could not download from %s, trying next rss"%(url)
-                pass
+
+            # Make sure it's a new release
+            if old_manifest and release == old_manifest['release'] and not args.force:
+                checked = True
+            else:
+                try:
+                    download(url, package_file)
+                    downloaded = True
+                    break
+                except:
+                    print>>sys.stderr, "could not download from %s, trying next rss"%(url)
+                    pass
         except:
             print>>sys.stderr, "could read not from rss %s"%(rss)
             pass
@@ -330,15 +427,26 @@ if rsses:
 if not downloaded:
     for url in urls:
         try:
-            download(url, package_file)
-            downloaded = True
-            break
+            release = None
+            if url['version_url']:
+                f = urllib2.urlopen(url['version_url'])
+                release = f.read(100).strip()
+                f.close()
+            if old_manifest and release == old_manifest['release'] and not args.force:
+                checked = True
+            else:
+                download(url['url'], package_file)
+                downloaded = True
         except:
             print>>sys.stderr, "could not download from %s, trying next url"%(url)
-            pass
+            raise
 
 if not downloaded:
-    print>>sys.stderr, "out of places to download from, try later"
+    if checked:
+        if quiet == 0:
+            print>>sys.stderr, "same release, not downloading"
+    else:
+        print>>sys.stderr, "out of places to try downloading from, try later"
     sys.exit(2)
 
 unpack_dir = path.join(temp_dir, 'unpack')
@@ -349,47 +457,33 @@ import_keys(gpg_path, temp_dir, config)
 (success, assertions, out_manifest) = get_assertions(gpg_path, temp_dir, unpack_dir, files)
 
 if old_manifest:
-    if out_manifest['name'] != old_manifest['name']:
-        print>>sys.stderr, "The old directory has a manifest for a different package"
-        sys.exit(3)
-    if LooseVersion(out_manifest['release']) < LooseVersion(old_manifest['release']) and not args.force:
-        print>>sys.stderr, "This would downgrade from version %s to %s"%(old_manifest['release'],out_manifest['release'])
-        sys.exit(4)
-    elif LooseVersion(out_manifest['release']) == LooseVersion(old_manifest['release']):
-        if quiet <= 1:
-            print>>sys.stderr, "This is a reinstall of version %s"%(old_manifest['release'])
-    else:
-        if quiet == 0:
-            print>>sys.stderr, "Upgrading from version %s to %s"%(old_manifest['release'],out_manifest['release'])
+    check_name_and_version(out_manifest, old_manifest)
 
 if not success and quiet <= 1:
     print>>sys.stderr, "There were errors getting assertions"
 
 total_weight = check_assertions(config, assertions)
-if not total_weight:
+if total_weight is None:
     print>>sys.stderr, "There were errors checking assertions, build is untrusted, aborting"
     sys.exit(5)
 
 if quiet == 0:
     print>>sys.stderr, "Successful with signature weight %d"%(total_weight)
 
+if config.get('waiting_period', 0) > 0 and path.exists(dest_path):
+    waiting_path = tempfile.mkdtemp('', prog)
+    shutil.copytree(unpack_dir, path.join(waiting_path, 'unpack'))
+    f = file(path.join(dest_path, '.gitian-waiting'), 'w')
+    yaml.dump({'time': time.time(), 'out_manifest': out_manifest, 'waiting_path': waiting_path}, f)
+    f.close()
+    if quiet == 0:
+        print>>sys.stderr, "Started waiting period"
+else:
+    if args.dryrun:
+        print>>sys.stderr, "Dry run, not copying"
+    else:
+        copy_to_destination(unpack_dir, dest_path, out_manifest, old_manifest)
 
-for root, dirs, files in os.walk(unpack_dir, topdown = True):
-    rel = path.relpath(root, unpack_dir)
-    if not path.exists(path.join(dest_path, rel)):
-        os.mkdir(path.normpath(path.join(dest_path, rel)))
-    for f in files:
-        shutil.copy2(path.join(root, f), path.join(dest_path, rel, f))
-
-if old_manifest:
-    removed = set(old_manifest['sums'].keys()).difference(out_manifest['sums'].keys())
-    for f in removed:
-        if path.exists(path.join(dest_path, f)):
-            os.unlink(path.join(dest_path, f))
-
-f = file(path.join(dest_path, '.gitian-manifest'), 'w')
-yaml.dump(out_manifest, f)
-f.close()
 
 if args.post:
     os.system(args.post)
