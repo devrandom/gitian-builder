@@ -81,3 +81,9 @@ The machine configuration requires access to br0 and assumes that the host addre
 
     sudo brctl addbr br0
     sudo ifconfig br0 10.0.2.2/24 up
+
+## Tests
+
+Not very extensive, currently.
+
+`python -m unittest discover test`
