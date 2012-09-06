@@ -12,11 +12,10 @@ This performs a build inside a VM, with deterministic inputs and outputs.  If th
 
 Install prereqs:
 
-    sudo apt-get install apt-cacher
-    sudo service apt-cacher start
+    sudo apt-get install apt-cacher-ng python-vm-builder ruby
 
 If you want to use kvm:
-    sudo apt-get install python-vm-builder qemu-kvm
+    sudo apt-get install qemu-kvm
 
 or alternatively, lxc (no need for hardware support):
     sudo apt-get install debootstrap lxc
