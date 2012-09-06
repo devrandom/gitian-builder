@@ -196,6 +196,7 @@ build_desc["remotes"].each do |remote|
   system!("cd inputs/#{dir} && git fetch --tags")
   commit = sanitize(remote["commit"], remote["commit"])
   commit = `cd inputs/#{dir} && git log --format=%H -1 #{commit}`.strip
+  raise "error looking up commit for tag #{remote["commit"]}" unless $?.exitstatus == 0
   system!("cd inputs/#{dir} && git checkout -q #{commit}")
   in_sums << "git:#{commit} #{dir}"
 end
