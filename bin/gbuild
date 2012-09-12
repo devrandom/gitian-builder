@@ -12,6 +12,11 @@ require 'pathname'
   'amd64' => 64,
 }
 
+@arches = {
+  'i386' => 'i386',
+  'amd64' => 'x86_64',
+}
+
 def system!(cmd)
   system(cmd) or raise "failed to run #{cmd}"
 end
@@ -68,7 +73,7 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
   system! "on-target true"
 
   info "Preparing build environment"
-  system! "on-target bash < target-bin/init-build.sh"
+  system! "on-target setarch #{@arches[arch]} bash < target-bin/init-build.sh"
 
   build_desc["files"].each do |filename|
     filename = sanitize(filename, "files section")
@@ -107,7 +112,7 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
   end
 
   info "Running build script (log in var/build.log)"
-  system! "on-target bash -x < var/build-script > var/build.log 2>&1"
+  system! "on-target setarch #{@arches[arch]} bash -x < var/build-script > var/build.log 2>&1"
 end
 
 ################################
