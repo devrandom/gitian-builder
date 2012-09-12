@@ -23,10 +23,11 @@ lxc.cgroup.devices.allow = c 254:0 rwm
 lxc.mount.entry=proc ROOTFS/proc proc nodev,noexec,nosuid 0 0
 lxc.mount.entry=sysfs ROOTFS/sys sysfs defaults  0 0
 
-# Container with network virtualized using a pre-configured bridge named br0 and
-# veth pair virtual network devices
-# On the host, run: ifconfig br0 up 10.0.2.2
+# Container with network virtualized using a pre-configured bridge named lxcbr0
+# and veth pair virtual network devices.
+# On the host, run (lxc might already have done this):
+#     ifconfig lxcbr0 up 10.0.3.1
 lxc.network.type = veth
 lxc.network.flags = up
-lxc.network.link = br0
-lxc.network.ipv4 = 10.0.2.5/24
+lxc.network.link = lxcbr0
+lxc.network.ipv4 = 10.0.3.5/24

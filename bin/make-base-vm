@@ -16,12 +16,6 @@ usage() {
   --suite U  build suite U instead of lucid
   --arch A   build architecture A (e.g. i386) instead of amd64
   --lxc      use lxc instead of kvm
-
-  The MIRROR_HOST environment variable can be used to change the
-  apt-cacher host.  It should be something that the target VM can
-  resolve.  It may be set to 127.0.0.1, in which case it will be
-  changed to 10.0.2.2 on the guest.  10.0.2.2 is the host IP as visible
-  from the guest under qemu networking.
 EOF
 }
 

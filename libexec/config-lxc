@@ -1,4 +1,13 @@
 #!/bin/bash
 
+set -e
+
+if ifconfig lxcbr0 > /dev/null 2>&1; then
+    true
+else
+    echo "Must configure lxcbr0 - check the README"
+    exit 1
+fi
+
 wd=`pwd`
 sed "s;ROOTFS;$wd/target-$LXC_SUITE-$LXC_ARCH;;s;ARCH;$LXC_ARCH;g" < etc/lxc.config.in > var/lxc.config

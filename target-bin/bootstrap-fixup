@@ -2,5 +2,15 @@
 
 set -e
 
-echo 'deb http://10.0.2.2:3142/archive.ubuntu.com/ubuntu lucid main universe' > $1/etc/apt/sources.list
-echo 'deb http://10.0.2.2:3142/archive.ubuntu.com/ubuntu lucid-updates main universe' >> $1/etc/apt/sources.list
+ip=`hostname --all-ip-addresses | cut -d ' ' -f1 | cut -d. -f1-3`
+
+if [ $ip = "10.0.3" ]; then
+    # LXC
+    MIRROR_HOST_ON_GUEST=${MIRROR_HOST_ON_GUEST:-10.0.3.1}
+else
+    # KVM
+    MIRROR_HOST_ON_GUEST=${MIRROR_HOST_ON_GUEST:-10.0.2.2}
+fi
+
+echo "deb http://$MIRROR_HOST_ON_GUEST:3142/archive.ubuntu.com/ubuntu lucid main universe" > $1/etc/apt/sources.list
+echo "deb http://$MIRROR_HOST_ON_GUEST:3142/archive.ubuntu.com/ubuntu lucid-updates main universe" >> $1/etc/apt/sources.list

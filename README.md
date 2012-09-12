@@ -76,10 +76,10 @@ Recent distributions allow lxc-start to be run by non-priviledged users, so you 
 
 If you have a runaway `lxc-start` command, just use `kill -9` on it.
 
-The machine configuration requires access to br0 and assumes that the host address is 10.0.2.2:
+The machine configuration requires access to lxcbr0 and assumes that the host address is 10.0.3.1 .  If lxc does not configure lxcbr0 on boot, you can do so manually:
 
-    sudo brctl addbr br0
-    sudo ifconfig br0 10.0.2.2/24 up
+    sudo brctl addbr lxcbr0
+    sudo ifconfig lxcbr0 10.0.3.1/24 up
 
 ## Tests
 

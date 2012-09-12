@@ -48,5 +48,5 @@ if [ -z "$USE_LXC" ]; then
     qemu-img create -f qcow2 -o backing_file="$BASE.qcow2" "$OUT.qcow2"
 else
     cp -a $BASE $OUT
-    on-target -u root bash < target-bin/bootstrap-fixup
+    on-target -u root /root/firstboot.sh
 fi
