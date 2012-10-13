@@ -2,5 +2,7 @@
 
 set -e
 
-echo 'deb http://10.0.2.2:3142/archive.ubuntu.com/ubuntu lucid main universe' > $1/etc/apt/sources.list
-echo 'deb http://10.0.2.2:3142/archive.ubuntu.com/ubuntu lucid-updates main universe' >> $1/etc/apt/sources.list
+. /etc/lsb-release
+
+echo "deb http://10.0.2.2:3142/archive.ubuntu.com/ubuntu $DISTRIB_CODENAME main universe" > $1/etc/apt/sources.list
+echo "deb http://10.0.2.2:3142/archive.ubuntu.com/ubuntu $DISTRIB_CODENAME-updates main universe" >> $1/etc/apt/sources.list
