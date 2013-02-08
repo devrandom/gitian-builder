@@ -4,6 +4,13 @@ set -e
 SUITE=lucid
 ARCH=amd64
 
+VMSW=KVM
+if [ -n "$USE_LXC" ]; then
+    VMSW=LXC
+elif [ -n "$USE_VBOX" ]; then
+    VMSW=VBOX
+fi
+
 usage() {
   echo "Usage: ${0##*/} [OPTION]..."
   echo "Make a clean copy of the base client."
@@ -44,9 +51,15 @@ fi
 BASE=base-$SUITE-$ARCH
 OUT=target-$SUITE-$ARCH
 
-if [ -z "$USE_LXC" ]; then
+case $VMSW in
+  KVM)
     qemu-img create -f qcow2 -o backing_file="$BASE.qcow2" "$OUT.qcow2"
-else
+    ;;
+  LXC)
     cp -a $BASE $OUT
     on-target -u root bash < target-bin/bootstrap-fixup
-fi
+    ;;
+  VBOX)
+    VBoxManage snapshot "Gitian-${SUITE}-${ARCH}" restore "Gitian-Clean"
+    ;;
+esac
