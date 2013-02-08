@@ -1,6 +1,14 @@
 #!/bin/sh
 
-if [ -z "$USE_LXC" ]; then
+VMSW=KVM
+if [ -n "$USE_LXC" ]; then
+    VMSW=LXC
+elif [ -n "$USE_VBOX" ]; then
+    VMSW=VBOX
+fi
+
+case $VMSW in
+  KVM)
     if [ ! -e var/target.pid ]; then exit; fi
 
     on-target -u root halt
@@ -13,6 +21,13 @@ if [ -z "$USE_LXC" ]; then
 
     echo Killing target since it did not shutdown within 10 seconds
     kill `cat var/target.pid`
-else
+    ;;
+  LXC)
     true
-fi
+    ;;
+  VBOX)
+    if [ ! -e var/target.vmname ]; then exit; fi
+    VBoxManage controlvm `cat var/target.vmname` savestate
+    rm var/target.vmname
+    ;;
+esac

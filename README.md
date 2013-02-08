@@ -8,27 +8,79 @@ This package can do a deterministic build of a package inside a VM.
 
 This performs a build inside a VM, with deterministic inputs and outputs.  If the build script takes care of all sources of non-determinism (mostly caused by timestamps), the result will always be the same.  This allows multiple independent verifiers to sign a binary with the assurance that it really came from the source they reviewed.
 
-## Synopsis:
+## Prerequisites:
 
-Install prereqs:
+Linux:
 
-    sudo apt-get install apt-cacher-ng python-vm-builder ruby
+    sudo apt-get install git apache2 apt-cacher-ng python-vm-builder ruby
 
-If you want to use kvm:
+OSX with MacPorts:
+
+    sudo port install ruby coreutils
+    export PATH=$PATH:/opt/local/libexec/gnubin  # Needed for sha256sum
+
+### KVM
+
     sudo apt-get install qemu-kvm
 
-or alternatively, lxc (no need for hardware support):
+### LXC (no need for hardware support):
+
     sudo apt-get install debootstrap lxc
 
-Create the base VM for use in further builds (requires sudo, please review the script):
+### VirtualBox
+
+Install virtualbox from virtualbox.org, and make sure VBoxManage is in your $PATH.
+
+## Create the base VM for use in further builds (requires sudo, please review the script):
+
+### KVM
 
     bin/make-base-vm
     bin/make-base-vm --arch i386
 
-or for lxc:
+### LXC
 
     bin/make-base-vm --lxc
     bin/make-base-vm --lxc --arch i386
+
+Set the USE_LXC environment variable to use LXC instead of KVM:
+    export USE_LXC=1
+
+### VirtualBox
+
+Command-line VBoxManage must be in your PATH
+
+Setup:
+
+make-base-vm cannot yet make VirtualBox virtual machines (patches welcome-- it should be possible to use VBoxManage, boot-from-network Linux images and PXE booting to do it). So you must either get or manually create VirtualBox machines that:
+
+1. Are named "Gitian-<suite>-<arch>" -- e.g. Gitian-lucid-i386 for a 32-bit, Ubuntu 10 machine.
+2. Have a booted-up snapshot named "Gitian-Clean" .  The build script resets the VM to that snapshot to get reproducible builds.
+3. Has the VM's NAT networking setup to forward port localhost:2223 on the host machine to port 22 of the VM; e.g.:
+    VBoxManage modifyvm Gitian-lucid-i386 --natpf1 "guestssh,tcp,,2223,,22"
+
+The final setup needed is to create an ssh key that will be used to login to the virtual machine:
+
+    ssh-keygen -t dsa -f var/id_dsa -N ""
+    ssh -p 2223 ubuntu@localhost 'mkdir -p .ssh && chmod 700 .ssh && cat >> .ssh/authorized_keys' < var/id_dsa.pub
+    ssh -p 2223 ubuntu@localhost
+    On VM: sudo bash
+    On VM: mkdir -p .ssh && chmod 700 .ssh && cat ~ubuntu/.ssh/authorized_keys >> .ssh/authorized_keys
+
+Set the USE_VBOX environment variable to use LXC instead of KVM:
+    export USE_VBOX=1
+
+## Sanity-testing
+
+If you have everything set-up properly, you should be able to:
+
+PATH=$PATH:$(pwd)/libexec
+make-clean-vm --suite lucid --arch i386
+start-target 32 lucid-i386
+on-target ls -la
+stop-target
+
+## Building
 
 Copy any additional build inputs into a directory named _inputs_.
 
@@ -52,6 +104,7 @@ Where <signer> is your signing PGP key ID and <release-name> is the name for the
 After you've merged everybody's signatures, verify them:
 
     bin/gverify --release <release-name> <package>.yml
+
 
 ## Poking around
 
