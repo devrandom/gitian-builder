@@ -196,9 +196,8 @@ build_desc["remotes"].each do |remote|
   dir = sanitize(remote["dir"], remote["dir"])
   unless File.exist?("inputs/#{dir}")
       system!("git init inputs/#{dir}")
-      system!("cd inputs/#{dir} && git remote add origin #{sanitize_path(remote["url"], remote["url"])}")
   end
-  system!("cd inputs/#{dir} && git fetch && git fetch --tags")
+  system!("cd inputs/#{dir} && git fetch #{sanitize_path(remote["url"], remote["url"])} +refs/tags/*:refs/tags/* +refs/heads/*:refs/heads/*")
   commit = sanitize(remote["commit"], remote["commit"])
   commit = `cd inputs/#{dir} && git log --format=%H -1 #{commit}`.strip
   raise "error looking up commit for tag #{remote["commit"]}" unless $?.exitstatus == 0
