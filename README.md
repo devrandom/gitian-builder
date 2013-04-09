@@ -10,22 +10,23 @@ This performs a build inside a VM, with deterministic inputs and outputs.  If th
 
 ## Prerequisites:
 
-Linux:
+Gentoo:
+
+    layman -a luke-jr  # needed for vmbuilder
+    sudo emerge dev-vcs/git net-misc/apt-cacher-ng app-emulation/vmbuilder dev-lang/ruby
+    sudo emerge app-emulation/qemu
+    export KVM=qemu-system-x86_64
+
+Ubuntu:
 
     sudo apt-get install git apache2 apt-cacher-ng python-vm-builder ruby
+    sudo apt-get install qemu-kvm         # for KVM mode
+    sudo apt-get install debootstrap lxc  # for LXC mode
 
 OSX with MacPorts:
 
     sudo port install ruby coreutils
     export PATH=$PATH:/opt/local/libexec/gnubin  # Needed for sha256sum
-
-### KVM
-
-    sudo apt-get install qemu-kvm
-
-### LXC (no need for hardware support):
-
-    sudo apt-get install debootstrap lxc
 
 ### VirtualBox
 
