@@ -68,7 +68,7 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
   end
 
   info "Installing additional packages (log in var/install.log)"
-  system! "on-target -u root DEBIAN_FRONTEND=noninteractive apt-get -y install #{build_desc["packages"].join(" ")} > var/install.log 2>&1"
+  system! "on-target -u root DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends -y install #{build_desc["packages"].join(" ")} > var/install.log 2>&1"
 
   info "Grabbing package manifest"
   system! "on-target -u root bash < target-bin/grab-packages.sh > var/base-#{suitearch}.manifest"
