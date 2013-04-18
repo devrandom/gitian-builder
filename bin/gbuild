@@ -73,6 +73,7 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
   system! "on-target true"
 
   info "Preparing build environment"
+  system! "on-target -u root sed \\''s/(ALL)/NOPASSWD:/'\\' -i /etc/sudoers"
   system! "on-target setarch #{@arches[arch]} bash < target-bin/init-build.sh"
 
   build_desc["files"].each do |filename|
