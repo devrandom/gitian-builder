@@ -9,8 +9,8 @@ usage() {
   echo "Run command on build target."
   echo
   cat << EOF
-  --help    display this help and exit
-  --user=U  run as U instead of ubuntu
+  --help		display this help and exit
+  --user <username>	run as <username> instead of ubuntu
 EOF
 }
 
