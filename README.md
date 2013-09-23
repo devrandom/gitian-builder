@@ -20,8 +20,7 @@ This performs a build inside a VM, with deterministic inputs and outputs.  If th
 ### Ubuntu:
 
     sudo apt-get install git apache2 apt-cacher-ng python-vm-builder ruby
-    sudo apt-get install qemu-kvm         # for KVM mode
-    sudo apt-get install debootstrap lxc  # for LXC mode
+    sudo apt-get install lxc  # for LXC mode
 
 ### OSX with MacPorts:
 
