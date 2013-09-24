@@ -48,6 +48,9 @@ if [ $# != 0 ] ; then
   done
 fi
 
+export LXC_SUITE=$SUITE
+export LXC_ARCH=$ARCH
+
 BASE=base-$SUITE-$ARCH
 OUT=target-$SUITE-$ARCH
 
