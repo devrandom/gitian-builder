@@ -87,6 +87,11 @@ If you have everything set-up properly, you should be able to:
 
     PATH=$PATH:$(pwd)/libexec
     make-clean-vm --suite lucid --arch i386
+
+    # For LXC:
+    LXC_ARCH=i386 LXC_SUITE=lucid on-target ls -la
+
+    # For KVM:
     start-target 32 lucid-i386
     on-target ls -la
     stop-target
