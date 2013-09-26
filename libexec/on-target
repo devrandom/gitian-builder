@@ -46,8 +46,8 @@ if [ -z "$USE_LXC" ]; then
 else
     config-lxc
     if [ $TUSER = "root" ]; then
-        sudo lxc-start -n gitian -f var/lxc.config -- $*
+        sudo lxc-start -n gitian -f var/lxc.config -- sh -c "$*"
     else
-        sudo lxc-start -n gitian -f var/lxc.config -- sudo -i -u $TUSER $*
+        sudo lxc-start -n gitian -f var/lxc.config -- sudo -i -u $TUSER sh -c "$*"
     fi
 fi
