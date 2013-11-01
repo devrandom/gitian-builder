@@ -208,6 +208,7 @@ def get_assertions(gpg_path, temp_dir, unpack_dir, file_names):
                 elif sums[summed_file] != shasum:
                     print>>sys.stderr, "sha256sum mismatch on %s" %(summed_file)
                     error = True
+                else:
                     del to_check[summed_file]
         if len(to_check) > 0 and quiet == 0:
             print>>sys.stderr, "Some of the files were not checksummed:"
