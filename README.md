@@ -92,7 +92,8 @@ If you have everything set-up properly, you should be able to:
     LXC_ARCH=i386 LXC_SUITE=lucid on-target ls -la
 
     # For KVM:
-    start-target 32 lucid-i386
+    start-target 32 lucid-i386 &
+    # wait a few seconds foro VM to start
     on-target ls -la
     stop-target
 
