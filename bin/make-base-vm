@@ -6,6 +6,7 @@ ARCH=amd64
 MIRROR=http://${MIRROR_HOST:-127.0.0.1}:3142/archive.ubuntu.com/ubuntu
 SECURITY_MIRROR=http://${MIRROR_HOST:-127.0.0.1}:3142/security.ubuntu.com/ubuntu
 LXC=0
+VBOX=0
 
 usage() {
   echo "Usage: ${0##*/} [OPTION]..."
@@ -16,6 +17,7 @@ usage() {
   --suite U  build suite U instead of lucid
   --arch A   build architecture A (e.g. i386) instead of amd64
   --lxc      use lxc instead of kvm
+  --vbox     use VirtualBox instead of kvm
 
   The MIRROR_HOST environment variable can be used to change the
   apt-cacher host.  It should be something that the target VM can
@@ -42,6 +44,10 @@ if [ $# != 0 ] ; then
         ;;
       --lxc)
         LXC=1
+        shift 1
+        ;;
+      --vbox)
+        VBOX=1
         shift 1
         ;;
       --*)
@@ -72,6 +78,26 @@ addpkg=openssh-server,pciutils,build-essential,git-core,subversion
 
 # Remove cron to work around vmbuilder issue when umounting /dev on target
 removepkg=cron
+
+if [ $VBOX = "1" ]; then
+  NAME="$SUITE-$ARCH"
+  if ! vagrant status | grep "$NAME" | grep "not created" > /dev/null; then
+    echo "Vagrant machine "$NAME" already exists, please remove it first (vagrant destroy "$NAME")"
+    exit 1
+  fi
+
+  vagrant up "$NAME"
+
+  vagrant ssh "$NAME" -c "sudo mkdir -p /root/.ssh && sudo chmod 700 /root/.ssh"
+  vagrant ssh "$NAME" -c "sudo sh -c 'cat >> /root/.ssh/authorized_keys'" < var/id_dsa.pub
+  vagrant ssh "$NAME" -c "sudo -u ubuntu mkdir -p /home/ubuntu/.ssh && sudo -u ubuntu chmod 700 /home/ubuntu/.ssh"
+  vagrant ssh "$NAME" -c "sudo sh -c 'cat >> /home/ubuntu/.ssh/authorized_keys'" < var/id_dsa.pub
+
+  VBoxManage snapshot "Gitian-$NAME" take "Gitian-Clean"
+  vagrant suspend "$NAME"
+
+  exit 0
+fi
 
 if [ -e $OUT.qcow2 ]; then
   echo $OUT.qcow2 already exists, please remove it first
