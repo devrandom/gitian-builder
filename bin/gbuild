@@ -136,6 +136,9 @@ OptionParser.new do |opts|
   opts.on("-c PAIRS", "--commit PAIRS", "comma separated list of DIRECTORY=COMMIT pairs") do |v|
     @options[:commit] = v
   end
+  opts.on("-u PAIRS", "--url PAIRS", "comma separated list of DIRECTORY=URL pairs") do |v|
+    @options[:url] = v
+  end
 end.parse!
 
 if !ENV["USE_LXC"] and !File.exist?("/dev/kvm")
@@ -189,10 +192,22 @@ if @options[:commit]
   end
 end
 
+urls = {}
+
+if @options[:url]
+  @options[:url].split(',').each do |pair|
+    (dir, url) = pair.split('=')
+    urls[dir] = url
+  end
+end
+
 build_desc["remotes"].each do |remote|
   if !remote["commit"]
     remote["commit"] = commits[remote["dir"]]
     raise "must specify a commit for directory #{remote["dir"]}" unless remote["commit"]
+  end
+  if urls[remote["dir"]]
+    remote["url"] = urls[remote["dir"]]
   end
   dir = sanitize(remote["dir"], remote["dir"])
   unless File.exist?("inputs/#{dir}")
