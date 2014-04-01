@@ -62,7 +62,7 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
 
   $stdout.write "Checking if target is up"
 
-  (1..10).each do
+  (1..30).each do
     system "on-target true 2> /dev/null" and break
     sleep 2
     $stdout.write '.'
