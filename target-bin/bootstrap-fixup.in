@@ -1,0 +1,8 @@
+#!/bin/sh
+
+set -e
+
+. /etc/lsb-release
+
+echo "deb http://HOSTIP:3142/archive.ubuntu.com/ubuntu $DISTRIB_CODENAME main universe" > $1/etc/apt/sources.list
+echo "deb http://HOSTIP:3142/archive.ubuntu.com/ubuntu $DISTRIB_CODENAME-updates main universe" >> $1/etc/apt/sources.list

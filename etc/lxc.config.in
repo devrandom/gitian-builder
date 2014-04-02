@@ -26,7 +26,9 @@ lxc.mount.entry=sysfs ROOTFS/sys sysfs defaults  0 0
 # Container with network virtualized using a pre-configured bridge named br0 and
 # veth pair virtual network devices
 # On the host, run: ifconfig br0 up 10.0.2.2
+# Alternatively, you can use another IP range for the bridge interface, in this case set
+# the environment variables GITIAN_HOST_IP and LXC_GUEST_IP appropriately.
 lxc.network.type = veth
 lxc.network.flags = up
 lxc.network.link = br0
-lxc.network.ipv4 = 10.0.2.5/24
+lxc.network.ipv4 = GUESTIP/24
