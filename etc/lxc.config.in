@@ -30,5 +30,5 @@ lxc.mount.entry=sysfs ROOTFS/sys sysfs defaults  0 0
 # the environment variables GITIAN_HOST_IP and LXC_GUEST_IP appropriately.
 lxc.network.type = veth
 lxc.network.flags = up
-lxc.network.link = br0
+lxc.network.link = GUESTLINK
 lxc.network.ipv4 = GUESTIP/24

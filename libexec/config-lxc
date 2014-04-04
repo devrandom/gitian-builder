@@ -6,4 +6,8 @@ if [ -z "$LXC_GUEST_IP" ]; then
     LXC_GUEST_IP=10.0.2.5
 fi
 
-sed "s;ROOTFS;$wd/target-$LXC_SUITE-$LXC_ARCH;;s;ARCH;$LXC_ARCH;g;;s;GUESTIP;$LXC_GUEST_IP;g" < etc/lxc.config.in > var/lxc.config
+if [ -z "$LXC_BRIDGE" ]; then
+    LXC_BRIDGE=br0
+fi
+
+sed "s;ROOTFS;$wd/target-$LXC_SUITE-$LXC_ARCH;;s;ARCH;$LXC_ARCH;g;;s;GUESTIP;$LXC_GUEST_IP;g;s;GUESTLINK;$LXC_BRIDGE;g" < etc/lxc.config.in > var/lxc.config
