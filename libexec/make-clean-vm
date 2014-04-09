@@ -60,6 +60,7 @@ case $VMSW in
     ;;
   LXC)
     cp -a $BASE $OUT
+    libexec/config-bootstrap-fixup
     on-target -u root bash < target-bin/bootstrap-fixup
     ;;
   VBOX)
