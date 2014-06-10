@@ -94,6 +94,8 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
   File.open("var/build-script", "w") do |script|
     script.puts "#!/bin/bash"
     script.puts "set -e"
+    script.puts "export LANG='en_US.UTF-8'"
+    script.puts "export LC_ALL='en_US.UTF-8'"
     script.puts "umask 002"
     script.puts "export OUTDIR=$HOME/out"
     script.puts "GBUILD_BITS=#{bits}"
