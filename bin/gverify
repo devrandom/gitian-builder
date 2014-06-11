@@ -40,6 +40,9 @@ OptionParser.new do |opts|
   opts.on("-d DEST", "--destination DEST", "directory to place signature in") do |v|
     @options[:destination] = v
   end
+  opts.on("-c SIGNER", "--compare-to SIGNER", "compare other manifests to SIGNER's, if not given pick first") do |v|
+    @options[:compareto] = v
+  end
 end.parse!
 
 base_dir = Pathname.new(__FILE__).expand_path.dirname.parent
@@ -58,6 +61,7 @@ package_name = sanitize(package_name, "package name")
 destination = @options[:destination] || File.join(base_dir, "sigs", package_name)
 release = @options[:release] || "current"
 release = sanitize(release, "release")
+verbose = @options[:verbose]
 
 release_path = File.join(destination, release)
 
@@ -67,6 +71,13 @@ result_file = "#{package_name}-build.assert"
 sig_file = "#{result_file}.sig"
 
 current_manifest = nil
+if @options[:compareto]
+  # Load a specific 'golden' manifest to compare to
+  compareto = @options[:compareto]
+  result_path = sanitize_path(File.join(release_path, compareto, result_file), "result path")
+  result = YAML.load_file(result_path)
+  current_manifest = result['out_manifest']
+end
 
 did_fail = false
 
@@ -113,6 +124,16 @@ Dir.foreach(release_path) do |signer_dir|
       end
     end
     puts "#{signer_dir}: MISMATCH"
+    if verbose
+      lines1 = current_manifest.each_line
+      lines2 = result['out_manifest'].each_line
+      lines1.zip(lines2) do |line|
+        if line[0] != line[1]
+          puts "- "+line[0]
+          puts "+ "+line[1]
+        end
+      end
+    end
     did_fail = true
   else
     out.each_line do |line|
@@ -128,7 +149,10 @@ Dir.foreach(release_path) do |signer_dir|
     end
     puts "#{signer_dir}: OK"
   end
-  current_manifest = result['out_manifest']
+  if !current_manifest
+    # take first manifest as 'current' to compare against
+    current_manifest = result['out_manifest']
+  end
 end
 
 exit 1 if did_fail
