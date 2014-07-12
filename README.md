@@ -93,7 +93,7 @@ If you have everything set-up properly, you should be able to:
 
     # For KVM:
     start-target 32 lucid-i386 &
-    # wait a few seconds foro VM to start
+    # wait a few seconds for VM to start
     on-target ls -la
     stop-target
 
