@@ -177,10 +177,12 @@ cache_dir = 'cache'
 FileUtils.rm_rf(build_dir)
 FileUtils.mkdir(build_dir)
 FileUtils.mkdir_p(result_dir)
-FileUtils.mkdir_p(cache_dir)
 
 package_name = build_desc["name"] or raise "must supply name"
 package_name = sanitize(package_name, "package name")
+
+FileUtils.mkdir_p(File.join(cache_dir, "common"))
+FileUtils.mkdir_p(File.join(cache_dir, package_name))
 
 suites = build_desc["suites"] or raise "must supply suites"
 archs = build_desc["architectures"] or raise "must supply architectures"
