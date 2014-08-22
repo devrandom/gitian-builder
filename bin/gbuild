@@ -80,11 +80,11 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
     system! "copy-to-target #{@quiet_flag} inputs/#{filename} build/"
   end
 
-  if Dir.exists?("cache/#{build_desc["name"]}")
+  if File.directory?("cache/#{build_desc["name"]}")
     system! "copy-to-target #{@quiet_flag} cache/#{build_desc["name"]}/ cache/"
   end
 
-  if Dir.exists?("cache/common")
+  if File.directory?("cache/common")
     system! "copy-to-target #{@quiet_flag} cache/common/ cache/"
   end
 
