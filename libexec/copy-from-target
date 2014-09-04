@@ -50,5 +50,5 @@ if [ -z "$USE_LXC" ]; then
     scp $QUIET_FLAG -oConnectTimeout=30 -oNoHostAuthenticationForLocalhost=yes -i ${GITIAN_BASE:-.}/var/id_dsa -P $VM_SSH_PORT -r $TUSER@localhost:$1 $2
 else
     config-lxc
-    sudo lxc-start -n gitian -f var/lxc.config -- sudo -i -u $TUSER tar -cf - "$1" | tar -C "$2" -xkf -
+    sudo lxc-execute -n gitian -f var/lxc.config -- sudo -i -u $TUSER tar -cf - "$1" | tar -C "$2" -xkf -
 fi
