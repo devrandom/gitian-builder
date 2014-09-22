@@ -138,13 +138,18 @@ TODO:
 
 ## LXC tips
 
-`bin/gbuild` runs `lxc-execute`, which may require root.  If you are in the admin group, you can add the following sudoers line to prevent asking for the password every time:
+`bin/gbuild` runs `lxc-execute` or `lxc-start`, which may require root.  If you are in the admin group, you can add the following sudoers line to prevent asking for the password every time:
 
     %admin ALL=NOPASSWD: /usr/bin/lxc-execute
+    %admin ALL=NOPASSWD: /usr/bin/lxc-start
 
-Recent distributions allow lxc-execute to be run by non-priviledged users, so you might be able to rip-out the `sudo` calls in `libexec/*`.
+Right now `lxc-start` is the default, but you can force `lxc-execute` (useful for Ubuntu 14.04) with:
 
-If you have a runaway `lxc-execute` command, just use `kill -9` on it.
+    export LXC_EXECUTE=lxc-execute
+
+Recent distributions allow lxc-execute / lxc-start to be run by non-priviledged users, so you might be able to rip-out the `sudo` calls in `libexec/*`.
+
+If you have a runaway `lxc-start` command, just use `kill -9` on it.
 
 The machine configuration requires access to br0 and assumes that the host address is `10.0.2.2`:
 

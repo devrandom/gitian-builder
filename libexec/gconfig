@@ -1,1 +1,4 @@
 VM_SSH_PORT=2223
+if [ -z "$LXC_EXECUTE" ]; then
+  LXC_EXECUTE=lxc-start
+fi

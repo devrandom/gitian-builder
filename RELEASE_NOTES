@@ -1,5 +1,9 @@
 Important:
 
-We switched from using lxc-start to using lxc-execute.  lxc-execute requires lxc-init (or init.lxc) to be available on the guest at one of the expected places.  You might have to manually install lxc on your base VM image or recreate the image.
+We are planning on switching from using lxc-start to using lxc-execute.  lxc-execute requires lxc-init (or init.lxc) to be available on the guest at one of the expected places.  You might have to manually install lxc on your base VM image or recreate the image.
+
+To enable this now (required for Ubuntu 14.04), do:
+
+  export LXC_EXECUTE=lxc-execute
 
 If your guest is more recent than the host, all bets are off, since lxc-execute may not be able to find the lxc init.
