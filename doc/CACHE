@@ -1,5 +1,6 @@
 Gitian includes two caches where build-assets may be saved for use with
-subsequent builds.
+subsequent builds. These caches are only enabled if the "enable_cache" key
+is enabled in the build descriptor.
 
 Common cache:
 All descriptors share this cache. It can be useful for storing fetched sources,

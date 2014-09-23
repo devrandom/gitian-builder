@@ -80,12 +80,14 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
     system! "copy-to-target #{@quiet_flag} inputs/#{filename} build/"
   end
 
-  if File.directory?("cache/#{build_desc["name"]}")
-    system! "copy-to-target #{@quiet_flag} cache/#{build_desc["name"]}/ cache/"
-  end
+  if build_desc["enable_cache"]
+    if File.directory?("cache/#{build_desc["name"]}")
+      system! "copy-to-target #{@quiet_flag} cache/#{build_desc["name"]}/ cache/"
+    end
 
-  if File.directory?("cache/common")
-    system! "copy-to-target #{@quiet_flag} cache/common/ cache/"
+    if File.directory?("cache/common")
+      system! "copy-to-target #{@quiet_flag} cache/common/ cache/"
+    end
   end
 
   info "Updating apt-get repository (log in var/install.log)"
@@ -173,6 +175,7 @@ in_sums = []
 build_dir = 'build'
 result_dir = 'result'
 cache_dir = 'cache'
+enable_cache = build_desc["enable_cache"]
 
 FileUtils.rm_rf(build_dir)
 FileUtils.mkdir(build_dir)
@@ -181,8 +184,10 @@ FileUtils.mkdir_p(result_dir)
 package_name = build_desc["name"] or raise "must supply name"
 package_name = sanitize(package_name, "package name")
 
-FileUtils.mkdir_p(File.join(cache_dir, "common"))
-FileUtils.mkdir_p(File.join(cache_dir, package_name))
+if enable_cache
+  FileUtils.mkdir_p(File.join(cache_dir, "common"))
+  FileUtils.mkdir_p(File.join(cache_dir, package_name))
+end
 
 suites = build_desc["suites"] or raise "must supply suites"
 archs = build_desc["architectures"] or raise "must supply architectures"
@@ -249,10 +254,11 @@ suites.each do |suite|
     info "Grabbing results"
     system! "copy-from-target #{@quiet_flag} out #{build_dir}"
 
-    info "Grabbing cache"
-    system! "copy-from-target #{@quiet_flag} cache/#{package_name}/ #{cache_dir}"
-    system! "copy-from-target #{@quiet_flag} cache/common/ #{cache_dir}"
-
+    if enable_cache
+      info "Grabbing cache"
+      system! "copy-from-target #{@quiet_flag} cache/#{package_name}/ #{cache_dir}"
+      system! "copy-from-target #{@quiet_flag} cache/common/ #{cache_dir}"
+    end
     base_manifest = File.read("var/base-#{suite}-#{arch}.manifest")
     base_manifests["#{suite}-#{arch}"] = base_manifest
   end
@@ -275,20 +281,22 @@ Dir.glob(File.join(out_dir, '**', '*'), File::FNM_DOTMATCH).sort.each do |file_i
   puts out_sums[file] unless @options[:quiet]
 end
 
-Dir.glob(File.join(cache_common_dir, '**', '*'), File::FNM_DOTMATCH).sort.each do |file_in_out|
-  next if File.directory?(file_in_out)
-  file = file_in_out.sub(cache_common_dir + File::SEPARATOR, '')
-  file = sanitize_path(file, file_in_out)
-  cache_common_sums[file] = `cd #{cache_common_dir} && sha256sum #{file}`
-  raise "failed to sum #{file}" unless $? == 0
-end
+if enable_cache
+  Dir.glob(File.join(cache_common_dir, '**', '*'), File::FNM_DOTMATCH).sort.each do |file_in_out|
+    next if File.directory?(file_in_out)
+    file = file_in_out.sub(cache_common_dir + File::SEPARATOR, '')
+    file = sanitize_path(file, file_in_out)
+    cache_common_sums[file] = `cd #{cache_common_dir} && sha256sum #{file}`
+    raise "failed to sum #{file}" unless $? == 0
+  end
 
-Dir.glob(File.join(cache_package_dir, '**', '*'), File::FNM_DOTMATCH).sort.each do |file_in_out|
-  next if File.directory?(file_in_out)
-  file = file_in_out.sub(cache_package_dir + File::SEPARATOR, '')
-  file = sanitize_path(file, file_in_out)
-  cache_package_sums[file] = `cd #{cache_package_dir} && sha256sum #{file}`
-  raise "failed to sum #{file}" unless $? == 0
+  Dir.glob(File.join(cache_package_dir, '**', '*'), File::FNM_DOTMATCH).sort.each do |file_in_out|
+    next if File.directory?(file_in_out)
+    file = file_in_out.sub(cache_package_dir + File::SEPARATOR, '')
+    file = sanitize_path(file, file_in_out)
+    cache_package_sums[file] = `cd #{cache_package_dir} && sha256sum #{file}`
+    raise "failed to sum #{file}" unless $? == 0
+  end
 end
 
 out_manifest = out_sums.keys.sort.map { |key| out_sums[key] }.join('')
