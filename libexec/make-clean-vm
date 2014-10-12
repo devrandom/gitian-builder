@@ -59,7 +59,7 @@ case $VMSW in
     qemu-img create -f qcow2 -o backing_file="$BASE.qcow2" "$OUT.qcow2"
     ;;
   LXC)
-    cp -a $BASE $OUT
+    cp -a --sparse=always $BASE $OUT
     libexec/config-bootstrap-fixup
     on-target -u root bash < target-bin/bootstrap-fixup
     ;;
