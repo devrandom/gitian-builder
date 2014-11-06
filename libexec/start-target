@@ -22,7 +22,7 @@ case $VMSW in
             [ -n "$KVM" ] || KVM=qemu-system-x86_64
             ;;
     esac
-    $KVM -enable-kvm -m ${VMEM:-2000} -smp ${NPROCS:-2} -drive file=target-$SUFFIX.qcow2,cache=writeback -net nic,model=virtio -net user,hostfwd=tcp:127.0.0.1:$VM_SSH_PORT-:22 -vnc 127.0.0.1:16 > var/target.log 2>&1 &
+    $KVM -enable-kvm -m ${VMEM:-2000} -smp ${NPROCS:-2} -drive file=target-$SUFFIX.qcow2,cache=writeback,if=virtio -net nic,model=virtio -net user,hostfwd=tcp:127.0.0.1:$VM_SSH_PORT-:22 -vnc 127.0.0.1:16 > var/target.log 2>&1 &
     echo $! > var/target.pid
     wait
     rm var/target.pid
