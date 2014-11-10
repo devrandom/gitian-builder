@@ -233,12 +233,15 @@ build_desc["remotes"].each do |remote|
   dir = sanitize(remote["dir"], remote["dir"])
   unless File.exist?("inputs/#{dir}")
       system!("git init inputs/#{dir}")
+      system!("cd inputs/#{dir} && git config core.logAllRefUpdates false")
   end
-  system!("cd inputs/#{dir} && git fetch --update-head-ok #{sanitize_path(remote["url"], remote["url"])} +refs/tags/*:refs/tags/* +refs/heads/*:refs/heads/*")
+  system!("cd inputs/#{dir} && git fetch -q #{sanitize_path(remote["url"], remote["url"])} +refs/tags/*:refs/remotes/tags/* +refs/heads/*:refs/remotes/heads/*")
   commit = sanitize(remote["commit"], remote["commit"])
   commit = `cd inputs/#{dir} && git log --format=%H -1 #{commit}`.strip
   raise "error looking up commit for tag #{remote["commit"]}" unless $?.exitstatus == 0
-  system!("cd inputs/#{dir} && git checkout -q #{commit}")
+  system!("cd inputs/#{dir} && git update-ref HEAD #{commit}")
+  system!("cd inputs/#{dir} && git repack -a -d -q")
+  system!("cd inputs/#{dir} && git pack-refs --all")
   in_sums << "git:#{commit} #{dir}"
 end
 
