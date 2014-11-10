@@ -109,6 +109,8 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
     script.puts "umask 002"
     script.puts "export OUTDIR=$HOME/out"
     script.puts "GBUILD_BITS=#{bits}"
+    script.puts "GBUILD_PACKAGE_CACHE=$HOME/cache/#{build_desc["name"]}"
+    script.puts "GBUILD_COMMON_CACHE=$HOME/cache/common"
     script.puts "MAKEOPTS=(-j#{@options[:num_procs]})"
     (ref_date, ref_time) = reference_datetime.split
     script.puts "REFERENCE_DATETIME='#{reference_datetime}'"
