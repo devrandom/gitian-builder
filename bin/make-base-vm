@@ -74,7 +74,7 @@ if [ $ARCH = "amd64" -a $SUITE = "hardy" ]; then
   FLAVOUR=server
 fi
 
-addpkg=openssh-server,pciutils,build-essential,git-core,subversion,lxc
+addpkg=openssh-server,pciutils,build-essential,git-core,subversion,lxc,linux-image-generic
 
 # Remove cron to work around vmbuilder issue when umounting /dev on target
 removepkg=cron
