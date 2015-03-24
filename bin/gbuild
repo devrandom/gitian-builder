@@ -96,7 +96,11 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
   info "Installing additional packages (log in var/install.log)"
   system! "on-target -u root -e DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends -y install #{build_desc["packages"].join(" ")} > var/install.log 2>&1"
 
-  info "Downloading system packages and creating manifest. This may take a while."
+  if @options[:upgrade] || system("on-target -u root '[ ! -e /var/cache/gitian/initial-upgrade ]'")
+      info "Upgrading system, may take a while"
+      system! "on-target -u root bash < target-bin/upgrade-system.sh > var/install.log 2>&1"
+  end
+  info "Creating package manifest"
   system! "on-target -u root bash < target-bin/grab-packages.sh > var/base-#{suitearch}.manifest"
 
   info "Creating build script (var/build-script)"
@@ -140,6 +144,9 @@ OptionParser.new do |opts|
 
   opts.on("-i", "--skip-image", "reuse current target image") do |v|
     @options[:skip_image] = v
+  end
+  opts.on("--upgrade", "upgrade guest with latest packages") do |v|
+    @options[:upgrade] = v
   end
   opts.on("-q", "--quiet", "be quiet") do |v|
     @options[:quiet] = v

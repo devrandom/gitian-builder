@@ -9,3 +9,4 @@ inputs
 base*
 *.qcow2
 sigs
+target-bin/bootstrap-fixup

@@ -1,3 +1,16 @@
+2015-03-23
+----------
+
+Now ensuring that `apt-get dist-upgrade` occurs at least once before package manifest
+is computed.  This is because distributions usually don't store old versions of packages
+in the repos, so we can't download the exact package version we have installed if it's
+out of date.
+
+gbuild now has a --upgrade flag that forces an upgrade after the first one.
+
+Other Notes
+===========
+
 Important:
 
 We are planning on switching from using lxc-start to using lxc-execute.  lxc-execute requires lxc-init (or init.lxc) to be available on the guest at one of the expected places.  You might have to manually install lxc on your base VM image or recreate the image.
