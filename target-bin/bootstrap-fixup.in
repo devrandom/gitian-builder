@@ -11,12 +11,18 @@ echo '127.0.1.1 gitian' >> /etc/hosts
 
 # If LXC
 if grep /lxc/gitian /proc/1/cgroup > /dev/null; then
+  adduser --disabled-password --gecos ubuntu --quiet ubuntu || true
   apt-get remove -y rsyslog
   dpkg-divert --local --rename --add /sbin/initctl
   ln -s /bin/true /sbin/initctl
   dpkg-divert --local --rename --add /usr/bin/ischroot
   ln -s /bin/true /usr/bin/ischroot
-  for pkg in lxc cgmanager udev plymouth dmsetup upstart; do
-      echo $pkg hold | dpkg --set-selections || true
-  done
+  # Prevent interaction with init during upgrades
+  dpkg-divert --local --rename --add /usr/sbin/policy-rc.d
+  echo 'exit 101' > /usr/sbin/policy-rc.d
+  chmod +x /usr/sbin/policy-rc.d
+## These are superceded by the policy-rc.d fix above
+#  for pkg in lxc cgmanager udev plymouth dmsetup upstart; do
+#      echo $pkg hold | dpkg --set-selections || true
+#  done
 fi
