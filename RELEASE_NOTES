@@ -1,3 +1,11 @@
+2015-05-16
+----------
+
+LXC support has been revamped:
+
+* debootstrap is now used directly, so that no kernel or grub packages are installed
+* an attempt has been made to eliminate cases where an update of a package can fail because the container is missing a real init/upstart process
+
 2015-03-23
 ----------
 

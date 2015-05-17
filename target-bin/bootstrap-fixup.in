@@ -5,4 +5,17 @@ set -e
 . /etc/lsb-release
 
 echo "deb http://HOSTIP:3142/archive.ubuntu.com/ubuntu $DISTRIB_CODENAME main universe" > $1/etc/apt/sources.list
+echo "deb http://HOSTIP:3142/security.ubuntu.com/ubuntu $DISTRIB_CODENAME-security main universe" >> $1/etc/apt/sources.list
 echo "deb http://HOSTIP:3142/archive.ubuntu.com/ubuntu $DISTRIB_CODENAME-updates main universe" >> $1/etc/apt/sources.list
+echo '127.0.1.1 gitian' >> /etc/hosts
+
+# If LXC
+if grep /lxc/gitian /proc/1/cgroup > /dev/null; then
+  apt-get remove -y rsyslog
+  dpkg-divert --local --rename --add /sbin/initctl
+  ln -s /bin/true /sbin/initctl
+  dpkg-divert --local --rename --add /usr/bin/ischroot
+  ln -s /bin/true /usr/bin/ischroot
+  echo lxc hold | dpkg --set-selections || true
+  echo cgmanager hold | dpkg --set-selections || true
+fi

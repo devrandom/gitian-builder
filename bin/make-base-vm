@@ -74,7 +74,13 @@ if [ $ARCH = "amd64" -a $SUITE = "hardy" ]; then
   FLAVOUR=server
 fi
 
-addpkg=openssh-server,pciutils,build-essential,git-core,subversion,lxc,linux-image-generic
+addpkg=pciutils,build-essential,git-core,subversion
+
+if [ $LXC = "1" ]; then
+  addpkg=$addpkg,lxc
+else
+  addpkg=$addpkg,linux-image-generic,grub-pc,openssh-server
+fi
 
 # Remove cron to work around vmbuilder issue when umounting /dev on target
 removepkg=cron
@@ -99,26 +105,40 @@ if [ $VBOX = "1" ]; then
   exit 0
 fi
 
-if [ -e $OUT.qcow2 ]; then
-  echo $OUT.qcow2 already exists, please remove it first
-  exit 1
+if [ $LXC = "1" ]; then
+  if [ -e $OUT ]; then
+    echo $OUT already exists, please remove it first
+    #exit 1
+  fi
+else
+  if [ -e $OUT.qcow2 ]; then
+    echo $OUT.qcow2 already exists, please remove it first
+    exit 1
+  fi
 fi
 
-libexec/config-bootstrap-fixup
-rm -rf $OUT
-env -i LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 sudo vmbuilder kvm ubuntu --rootsize 10240 --arch=$ARCH --suite=$SUITE --addpkg=$addpkg --removepkg=$removepkg --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=$MIRROR --security-mirror=$SECURITY_MIRROR --dest=$OUT --flavour=$FLAVOUR --firstboot=`pwd`/target-bin/bootstrap-fixup
-mv $OUT/*.qcow2 $OUT.qcow2
-rm -rf $OUT
-
 if [ $LXC = "1" ]; then
-    #sudo debootstrap --include=$addpkg --arch=$ARCH $SUITE $OUT-root $MIRROR
-    echo Extracting partition for lxc
-    qemu-img convert $OUT.qcow2 $OUT.raw
-    loop=`sudo kpartx -av $OUT.raw|sed -n '/loop.p1/{s/.*loop\(.\)p1.*/\1/;p}'`
-    sudo cp --sparse=always /dev/mapper/loop${loop}p1 $OUT
-    sudo chown $USER $OUT
-    sudo kpartx -d /dev/loop$loop
-    rm -f $OUT.raw
+    sudo rm -rf $OUT-bootstrap
+    # Need universe for lxc in lucid
+    env -i LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 sudo debootstrap --arch=$ARCH --include=$addpkg --exclude=$removepkg --components=main,universe $SUITE $OUT-bootstrap $MIRROR
+    dd if=/dev/zero of=$OUT-lxc bs=1M count=1 seek=10240
+    mkfs.ext4 $OUT-lxc
+    t=`mktemp -d gitian.XXXXXXXX`
+    sudo mount $OUT-lxc $t
+    sudo cp -a $OUT-bootstrap/* $t
+    sudo umount $t
+    rmdir $t
+
+    sudo rm -rf $OUT-bootstrap
+    mv $OUT-lxc $OUT
     # bootstrap-fixup is done in libexec/make-clean-vm
+else
+    libexec/config-bootstrap-fixup
+
+    rm -rf $OUT
+    env -i LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 sudo vmbuilder kvm ubuntu --rootsize 10240 --arch=$ARCH --suite=$SUITE --addpkg=$addpkg --removepkg=$removepkg --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=$MIRROR --security-mirror=$SECURITY_MIRROR --dest=$OUT --flavour=$FLAVOUR --firstboot=`pwd`/target-bin/bootstrap-fixup
+    mv $OUT/*.qcow2 $OUT.qcow2
+    rm -rf $OUT
+    # bootstrap-fixup is done on first boot
 fi
 
