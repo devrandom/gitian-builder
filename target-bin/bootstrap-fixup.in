@@ -16,6 +16,7 @@ if grep /lxc/gitian /proc/1/cgroup > /dev/null; then
   ln -s /bin/true /sbin/initctl
   dpkg-divert --local --rename --add /usr/bin/ischroot
   ln -s /bin/true /usr/bin/ischroot
-  echo lxc hold | dpkg --set-selections || true
-  echo cgmanager hold | dpkg --set-selections || true
+  for pkg in lxc cgmanager udev plymouth dmsetup upstart; do
+      echo $pkg hold | dpkg --set-selections || true
+  done
 fi
