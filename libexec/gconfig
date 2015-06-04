@@ -1,7 +1,7 @@
 VM_SSH_PORT=2223
 if [ -z "$LXC_EXECUTE" ]; then
   ver=`lxc-start --version`
-  if dpkg --compare-versions $ver ge 1.1.0 ; then
+  if dpkg --compare-versions $ver ge 1.0.0 ; then
     LXC_EXECUTE=lxc-execute
   else
     LXC_EXECUTE=lxc-start
