@@ -90,4 +90,4 @@ assert_path = File.join(release_path, "#{package_name}-build.assert")
 File.open(assert_path, "w") do |io|
   io.write result.to_yaml
 end
-system("#{program} -u \"#{signer}\" \"#{assert_path}\"")
+system!("#{program} -u \"#{signer}\" \"#{assert_path}\"")
