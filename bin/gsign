@@ -45,6 +45,14 @@ OptionParser.new do |opts|
   opts.on("-d DEST", "--destination DEST", "directory to place signature in") do |v|
     @options[:destination] = v
   end
+
+  opts.on("-e", "--ecdsa", "enable ecdsa signing instead of gpg") do |v|
+    @options[:ecdsa] = v
+  end
+
+  opts.on("-a PATH", "--armory PATH", "path to Armory source tree") do |v|
+    @options[:armory] = v
+  end
 end.parse!
 
 base_dir = Pathname.new(__FILE__).expand_path.dirname.parent
@@ -75,7 +83,9 @@ result['name'] = package_name
 result['type'] = 'build'
 result['optionals'] = optionals
 
-signer = @options[:signer] or raise "must supply signer with --signer"
+unless @options[:ecdsa]
+  signer = @options[:signer] or raise "must supply signer with --signer"
+end
 
 FileUtils.mkdir_p(destination)
 
@@ -85,4 +95,9 @@ assert_path = File.join(release_path, "#{package_name}-build.assert")
 File.open(assert_path, "w") do |io|
   io.write result.to_yaml
 end
-system!("gpg --detach-sign -u \"#{signer}\" \"#{assert_path}\"")
+if @options[:ecdsa]
+  ecdsa_path = File.join(@options[:armory], release_scripts, "signassert.py")
+  system("python #{ecdsa_path} \"#{assert_path}\"")
+else
+  system!("gpg --detach-sign -u \"#{signer}\" \"#{assert_path}\"")
+end
