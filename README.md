@@ -23,6 +23,14 @@ This performs a build inside a VM, with deterministic inputs and outputs.  If th
     sudo apt-get install qemu-kvm         # for KVM mode
     sudo apt-get install debootstrap lxc  # for LXC mode
 
+### Debian:
+
+See Ubuntu, and also run the following on Debian Jessie or newer:
+
+    sudo apt-get install ubuntu-archive-keyring
+
+On Debian Wheezy you run the same command, but you must first add backports to your system, because the package is only available in wheezy-backports.
+
 ### OSX with MacPorts:
 
     sudo port install ruby coreutils
