@@ -114,7 +114,7 @@ if [ $LXC = "1" ]; then
   # Need universe for lxc in lucid
   env -i LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 sudo debootstrap --arch=$ARCH --include=$addpkg --exclude=$removepkg --components=main,universe $SUITE $OUT-bootstrap $MIRROR
   dd if=/dev/zero of=$OUT-lxc bs=1M count=1 seek=10240
-  mkfs.ext4 -F $OUT-lxc
+  /sbin/mkfs.ext4 -F $OUT-lxc
   t=`mktemp -d gitian.XXXXXXXX`
   sudo mount $OUT-lxc $t
   sudo cp -a $OUT-bootstrap/* $t
