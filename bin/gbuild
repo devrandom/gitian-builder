@@ -163,7 +163,7 @@ OptionParser.new do |opts|
   opts.on("-u PAIRS", "--url PAIRS", "comma separated list of DIRECTORY=URL pairs") do |v|
     @options[:url] = v
   end
-  opts.on("--cache-read-only", "only use existing cache files, do not update them") do |v|
+  opts.on("-o", "--cache-read-only", "only use existing cache files, do not update them") do |v|
     @options[:cache_ro] = v
   end
 end.parse!
@@ -266,15 +266,13 @@ suites.each do |suite|
     # Build!
     build_one_configuration(suite, arch, build_desc, reference_datetime)
 
-    info "Grabbing results"
+    info "Grabbing results from target"
     system! "copy-from-target #{@quiet_flag} out #{build_dir}"
 
-    unless @options[:cache_ro]
-    if enable_cache
-      info "Grabbing cache"
+    if enable_cache && !@options[:cache_ro]
+      info "Grabbing cache from target"
       system! "copy-from-target #{@quiet_flag} cache/#{package_name}/ #{cache_dir}"
       system! "copy-from-target #{@quiet_flag} cache/common/ #{cache_dir}"
-    end
     end
     base_manifest = File.read("var/base-#{suite}-#{arch}.manifest")
     base_manifests["#{suite}-#{arch}"] = base_manifest
