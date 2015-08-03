@@ -163,6 +163,9 @@ OptionParser.new do |opts|
   opts.on("-u PAIRS", "--url PAIRS", "comma separated list of DIRECTORY=URL pairs") do |v|
     @options[:url] = v
   end
+  opts.on("--cache-read-only", "only use existing cache files, do not update them") do |v|
+    @options[:cache_ro] = v
+  end
 end.parse!
 
 if !ENV["USE_LXC"] and !File.exist?("/dev/kvm")
@@ -266,10 +269,12 @@ suites.each do |suite|
     info "Grabbing results"
     system! "copy-from-target #{@quiet_flag} out #{build_dir}"
 
+    unless @options[:cache_ro]
     if enable_cache
       info "Grabbing cache"
       system! "copy-from-target #{@quiet_flag} cache/#{package_name}/ #{cache_dir}"
       system! "copy-from-target #{@quiet_flag} cache/common/ #{cache_dir}"
+    end
     end
     base_manifest = File.read("var/base-#{suite}-#{arch}.manifest")
     base_manifests["#{suite}-#{arch}"] = base_manifest
