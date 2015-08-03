@@ -19,9 +19,13 @@ This performs a build inside a VM, with deterministic inputs and outputs.  If th
 
 ### Ubuntu:
 
+This pulls in all pre-requisites for KVM building on Ubuntu:
+
     sudo apt-get install git apache2 apt-cacher-ng python-vm-builder ruby qemu-utils
-    sudo apt-get install qemu-kvm         # for KVM mode
-    sudo apt-get install debootstrap lxc  # for LXC mode
+
+If you'd like to use LXC mode instead, install it as follows:
+
+    sudo apt-get install lxc
 
 ### Debian:
 
