@@ -39,6 +39,11 @@ On Debian Wheezy you run the same command, but you must first add backports to y
 
     sudo port install ruby coreutils
     export PATH=$PATH:/opt/local/libexec/gnubin  # Needed for sha256sum
+    
+### OSX with Homebrew:
+
+    brew install ruby coreutils
+    export PATH=$PATH:/opt/local/libexec/gnubin    
 
 #### VirtualBox:
 
