@@ -2,7 +2,7 @@
 
 set -e
 
-. /etc/lsb-release
+DISTRIB_CODENAME=`lsb_release -cs`
 
 echo "deb http://HOSTIP:3142/archive.ubuntu.com/ubuntu $DISTRIB_CODENAME main universe" > $1/etc/apt/sources.list
 echo "deb http://HOSTIP:3142/security.ubuntu.com/ubuntu $DISTRIB_CODENAME-security main universe" >> $1/etc/apt/sources.list
