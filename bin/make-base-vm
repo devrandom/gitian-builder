@@ -74,7 +74,7 @@ if [ $ARCH = "amd64" -a $SUITE = "hardy" ]; then
   FLAVOUR=server
 fi
 
-addpkg=pciutils,build-essential,git-core,subversion,language-pack-en,wget
+addpkg=pciutils,build-essential,git-core,subversion,language-pack-en,wget,lsb-release
 
 if [ $LXC = "1" ]; then
   addpkg=$addpkg,lxc
