@@ -2,11 +2,18 @@
 
 set -e
 
+DISTRIB_NAME=`lsb_release -is`
 DISTRIB_CODENAME=`lsb_release -cs`
 
-echo "deb http://HOSTIP:3142/archive.ubuntu.com/ubuntu $DISTRIB_CODENAME main universe" > $1/etc/apt/sources.list
-echo "deb http://HOSTIP:3142/security.ubuntu.com/ubuntu $DISTRIB_CODENAME-security main universe" >> $1/etc/apt/sources.list
-echo "deb http://HOSTIP:3142/archive.ubuntu.com/ubuntu $DISTRIB_CODENAME-updates main universe" >> $1/etc/apt/sources.list
+if [ $DISTRIB_NAME = "Ubuntu" ]; then
+  echo "deb http://HOSTIP:3142/archive.ubuntu.com/ubuntu $DISTRIB_CODENAME main universe" > $1/etc/apt/sources.list
+  echo "deb http://HOSTIP:3142/security.ubuntu.com/ubuntu $DISTRIB_CODENAME-security main universe" >> $1/etc/apt/sources.list
+  echo "deb http://HOSTIP:3142/archive.ubuntu.com/ubuntu $DISTRIB_CODENAME-updates main universe" >> $1/etc/apt/sources.list
+elif [ $DISTRIB_NAME = "Debian" ]; then
+  echo "deb http://HOSTIP:3142/ftp.debian.org/debian $DISTRIB_CODENAME main" > $1/etc/apt/sources.list
+  echo "deb http://HOSTIP:3142/security.debian.org/ $DISTRIB_CODENAME/updates main" >> $1/etc/apt/sources.list
+  echo "deb http://HOSTIP:3142/ftp.debian.org/debian $DISTRIB_CODENAME-updates main" >> $1/etc/apt/sources.list
+fi
 echo '127.0.1.1 gitian' >> /etc/hosts
 
 # If LXC

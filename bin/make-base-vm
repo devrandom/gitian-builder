@@ -1,10 +1,10 @@
 #!/bin/sh
 set -e
 
+DISTRO=ubuntu
 SUITE=lucid
 ARCH=amd64
-MIRROR=http://${MIRROR_HOST:-127.0.0.1}:3142/archive.ubuntu.com/ubuntu
-SECURITY_MIRROR=http://${MIRROR_HOST:-127.0.0.1}:3142/security.ubuntu.com/ubuntu
+MIRROR_BASE=http://${MIRROR_HOST:-127.0.0.1}:3142
 LXC=0
 VBOX=0
 
@@ -13,11 +13,12 @@ usage() {
   echo "Make a base client."
   echo
   cat << EOF
-  --help     display this help and exit
-  --suite U  build suite U instead of lucid
-  --arch A   build architecture A (e.g. i386) instead of amd64
-  --lxc      use lxc instead of kvm
-  --vbox     use VirtualBox instead of kvm
+  --help      display this help and exit
+  --distro D  build distro D (e.g. debian) instead of ubuntu
+  --suite U   build suite U instead of lucid
+  --arch A    build architecture A (e.g. i386) instead of amd64
+  --lxc       use lxc instead of kvm
+  --vbox      use VirtualBox instead of kvm
 
   The MIRROR_HOST environment variable can be used to change the
   apt-cacher host.  It should be something that both the host and the
@@ -33,6 +34,10 @@ if [ $# != 0 ] ; then
       --help|-h)
         usage
         exit 0
+        ;;
+      --distro|-d)
+        DISTRO="$2"
+        shift 2
         ;;
       --suite|-s)
         SUITE="$2"
@@ -61,6 +66,19 @@ if [ $# != 0 ] ; then
   done
 fi
 
+if [ $DISTRO = "debian" -a $LXC = "1" ]; then
+  echo "There is no support for Debian guests using LXC currently. Please use KVM or another distro for now."
+  exit 1
+fi
+
+if [ $DISTRO = "ubuntu" ]; then
+  MIRROR=$MIRROR_BASE/archive.ubuntu.com/ubuntu
+  SECURITY_MIRROR=$MIRROR_BASE/security.ubuntu.com/ubuntu
+elif [ $DISTRO = "debian" ]; then
+  MIRROR=$MIRROR_BASE/ftp.debian.org/debian
+  SECURITY_MIRROR=$MIRROR_BASE/security.debian.org/
+fi
+
 mkdir -p var
 
 if [ ! -e var/id_dsa ]; then
@@ -74,12 +92,28 @@ if [ $ARCH = "amd64" -a $SUITE = "hardy" ]; then
   FLAVOUR=server
 fi
 
-addpkg=pciutils,build-essential,git-core,subversion,language-pack-en,wget,lsb-release
+if [ $DISTRO = "debian" -a $ARCH = "amd64" ]; then
+  FLAVOUR=amd64
+elif [ $DISTRO = "debian" -a $ARCH = "i386" ]; then
+  FLAVOUR=i686-pae
+fi
+
+LOCALE_PKG=language-pack-en
+if [ $DISTRO = "debian" ]; then
+  LOCALE_PKG=locales
+fi
+
+addpkg=pciutils,build-essential,git-core,subversion,$LOCALE_PKG,wget,lsb-release
+
+KERNEL_PKG=linux-image-generic
+if [ $DISTRO = "debian" ]; then
+  KERNEL_PKG=
+fi
 
 if [ $LXC = "1" ]; then
   addpkg=$addpkg,lxc
 else
-  addpkg=$addpkg,linux-image-generic,grub-pc,openssh-server
+  addpkg=$addpkg,$KERNEL_PKG,grub-pc,openssh-server
 fi
 
 # Remove cron to work around vmbuilder issue when umounting /dev on target
@@ -96,8 +130,8 @@ if [ $VBOX = "1" ]; then
 
   vagrant ssh "$NAME" -c "sudo mkdir -p /root/.ssh && sudo chmod 700 /root/.ssh"
   vagrant ssh "$NAME" -c "sudo sh -c 'cat >> /root/.ssh/authorized_keys'" < var/id_dsa.pub
-  vagrant ssh "$NAME" -c "sudo -u ubuntu mkdir -p /home/ubuntu/.ssh && sudo -u ubuntu chmod 700 /home/ubuntu/.ssh"
-  vagrant ssh "$NAME" -c "sudo sh -c 'cat >> /home/ubuntu/.ssh/authorized_keys'" < var/id_dsa.pub
+  vagrant ssh "$NAME" -c "sudo -u $DISTRO mkdir -p /home/$DISTRO/.ssh && sudo -u $DISTRO chmod 700 /home/$DISTRO/.ssh"
+  vagrant ssh "$NAME" -c "sudo sh -c 'cat >> /home/$DISTRO/.ssh/authorized_keys'" < var/id_dsa.pub
 
   VBoxManage snapshot "Gitian-$NAME" take "Gitian-Clean"
   vagrant suspend "$NAME"
@@ -132,7 +166,7 @@ else
   libexec/config-bootstrap-fixup
 
   rm -rf $OUT
-  env -i LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 sudo vmbuilder kvm ubuntu --rootsize 10240 --arch=$ARCH --suite=$SUITE --addpkg=$addpkg --removepkg=$removepkg --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=$MIRROR --security-mirror=$SECURITY_MIRROR --dest=$OUT --flavour=$FLAVOUR --firstboot=`pwd`/target-bin/bootstrap-fixup
+  env -i LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 sudo vmbuilder kvm $DISTRO --rootsize 10240 --arch=$ARCH --suite=$SUITE --addpkg=$addpkg --removepkg=$removepkg --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=$MIRROR --security-mirror=$SECURITY_MIRROR --dest=$OUT --flavour=$FLAVOUR --firstboot=`pwd`/target-bin/bootstrap-fixup
   mv $OUT/*.qcow2 $OUT.qcow2
   rm -rf $OUT
   # bootstrap-fixup is done on first boot
