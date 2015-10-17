@@ -13,6 +13,10 @@ elif [ $DISTRIB_NAME = "Debian" ]; then
   echo "deb http://HOSTIP:3142/ftp.debian.org/debian $DISTRIB_CODENAME main" > $1/etc/apt/sources.list
   echo "deb http://HOSTIP:3142/security.debian.org/ $DISTRIB_CODENAME/updates main" >> $1/etc/apt/sources.list
   echo "deb http://HOSTIP:3142/ftp.debian.org/debian $DISTRIB_CODENAME-updates main" >> $1/etc/apt/sources.list
+  # grub-legacy conflicts grub-pc dependencies
+  # No grub-legacy on Ubuntu, just on Debian
+  # Work around bcron-run conflict due to cron being removed
+  apt-get purge -y grub-legacy bcron-run &> /dev/null
 fi
 echo '127.0.1.1 gitian' >> /etc/hosts
 
