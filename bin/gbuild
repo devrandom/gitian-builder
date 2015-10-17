@@ -204,7 +204,7 @@ if enable_cache
   FileUtils.mkdir_p(File.join(cache_dir, package_name))
 end
 
-distro = build_desc["distro"] or raise "must supply distro"
+distro = build_desc["distro"] || "ubuntu"
 suites = build_desc["suites"] or raise "must supply suites"
 archs = build_desc["architectures"] or raise "must supply architectures"
 reference_datetime = build_desc["reference_datetime"] or raise "must supply reference_datetime"
