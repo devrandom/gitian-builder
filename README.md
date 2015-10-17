@@ -49,6 +49,22 @@ On Debian Wheezy you run the same command, but you must first add backports to y
 
 Install virtualbox from http://www.virtualbox.org, and make sure `VBoxManage` is in your `$PATH`.
 
+## Debian Guests
+
+Gitian now supports Debian guests in addition to Ubuntu guests. Note that this doesn't mean you can allow the builders to choose to use either Debian or Ubuntu guests. The person creating the Gitian descriptor will need to choose a particular distro and suite for the guest and all builders must use that particular distro and suite, otherwise the software won't reproduce for everyone.
+
+The official vmbuilder only includes support for Ubuntu guests, so you need to install [Joseph Bisch's fork of vmbuilder](https://github.com/josephbisch/vmbuilder), which adds a Debian plugin.
+
+To create a Debian guest:
+
+    bin/make-base-vm --distro debian --suite jessie
+
+There is currently no support for LXC Debian guests. There is just KVM support. LXC support for Debian guests is planned to be added soon.
+
+Only Debian Jessie guests have been tested with Gitian. Debian Jessie is the current stable release of Debian at this time. If you have success (or trouble) with other versions of Debian, please let us know.
+
+If you are creating a Gitian descriptor, you can now specify a distro. If no distro is provided, the default is to assume Ubuntu. Since Ubuntu is assumed, older Gitian descriptors that don't specify a distro will still work as they always have.
+
 ## Create the base VM for use in further builds
 **NOTE:** requires `sudo`, please review the script
 
