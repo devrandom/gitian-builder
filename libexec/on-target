@@ -2,7 +2,7 @@
 
 . gconfig
 
-TUSER=ubuntu
+TUSER=$DISTRO
 
 usage() {
   echo "Usage: ${0##*/} [OPTION]... <command>"
