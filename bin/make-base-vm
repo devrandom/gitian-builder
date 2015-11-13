@@ -94,10 +94,10 @@ fi
 
 if [ $DISTRO = "debian" -a $ARCH = "amd64" ]; then
   FLAVOUR=amd64
-elif [ $DISTRO = "debian" -a $ARCH = "i386" -a \($SUITE = "wheezy" -o $SUITE = "jessie" -o $SUITE = "stretch" -o $SUITE = "sid"\) ]; then
-  FLAVOUR=686-pae
-elif [ $DISTRO = "debian" ]; then
+elif [ $DISTRO = "debian" -a $ARCH = "i386" -a \($SUITE = "squeeze" -o $SUITE = "lenny" -o $SUITE = "etch" -o $SUITE = "sarge" -o $SUITE = "woody" -o $SUITE = "potato" -o $SUITE = "slink" -o $SUITE = "hamm" -o $SUITE = "bo" -o $SUITE = "rex" -o $SUITE = "buzz"\) ]; then
   FLAVOUR=686
+elif [ $DISTRO = "debian" ]; then
+  FLAVOUR=686-pae
 fi
 
 LOCALE_PKG=language-pack-en
