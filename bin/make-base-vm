@@ -108,7 +108,15 @@ fi
 addpkg=pciutils,build-essential,git-core,subversion,$LOCALE_PKG,wget,lsb-release
 
 if [ $DISTRO = "ubuntu" ]; then
-  # Need comma at end to work around an issue with apt for Debian <= Squeeze regarding empty strings
+  # Need comma at end to work around an issue with apt for Debian <= Wheezy regarding empty strings
+  #
+  # If we left the comma down below when adding KERNEL_PKG to addpkg, the fact that KERNEL_PKG is undefined
+  # if DISTRO is debian would result in two commas in a row (,,), which is interpreted by apt-get as the
+  # package with the name empty string (""). This triggers a bug with apt versions < 1.0.3. So by adding the
+  # comma to the end of KERNEL_PKG, we are including that comma if the distro is ubuntu (and therefore we do
+  # have a kernel package that needs to be installed). If KERNEL_PKG is not set (i.e. we have Debian as the
+  # distro), then we don't add that extra comma and therefore, we don't end up with two commas in a row.
+  #
   # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=744940
   # http://anonscm.debian.org/cgit/apt/apt.git/commit/?h=1.0.3&id=d99854cac4065bc7b337815fb2116269d58dab73
   KERNEL_PKG=linux-image-generic,
