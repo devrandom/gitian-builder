@@ -2,7 +2,7 @@
 
 . gconfig
 
-TUSER=$DISTRO
+TUSER=${DISTRO:-ubuntu}
 QUIET_FLAG=
 
 usage() {
