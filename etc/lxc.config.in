@@ -32,4 +32,6 @@ lxc.network.type = veth
 lxc.network.flags = up
 lxc.network.link = GUESTLINK
 lxc.network.ipv4 = GUESTIP/24
+lxc.network.ipv4.gateway = auto
+
 lxc.utsname = gitian
