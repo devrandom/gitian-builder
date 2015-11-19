@@ -121,6 +121,10 @@ If you have everything set-up properly, you should be able to:
     PATH=$PATH:$(pwd)/libexec
     make-clean-vm --suite lucid --arch i386
 
+    # on-target needs $DISTRO to be set to debian if using a Debian guest
+    # (when running gbuild, $DISTRO is set based on the descriptor, so this line isn't needed)
+    DiSTRO=debian
+
     # For LXC:
     LXC_ARCH=i386 LXC_SUITE=lucid on-target ls -la
 
@@ -161,7 +165,7 @@ After you've merged everybody's signatures, verify them:
 * Log files are captured to the _var_ directory
 * You can run the utilities in libexec by running `PATH="libexec:$PATH"`
 * To start the target VM run `start-target 32 lucid-i386` or `start-target 64 lucid-amd64`
-* To ssh into the target run `on-target` or `on-target -u root`
+* To ssh into the target run `on-target` (after setting $DISTRO to debian if using a Debian guest) or `on-target -u root`
 * On the target, the _build_ directory contains the code as it is compiled and _install_ contains intermediate libraries
 * By convention, the script in `<package>.yml` starts with any environment setup you would need to manually compile things on the target
 
