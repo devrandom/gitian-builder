@@ -100,8 +100,8 @@ Command-line `VBoxManage` must be in your `$PATH`.
 
 The final setup needed is to create an `ssh` key that will be used to login to the virtual machine:
 
-    ssh-keygen -t dsa -f var/id_dsa -N ""
-    ssh -p 2223 ubuntu@localhost 'mkdir -p .ssh && chmod 700 .ssh && cat >> .ssh/authorized_keys' < var/id_dsa.pub
+    ssh-keygen -t rsa -f var/id_rsa -N ""
+    ssh -p 2223 ubuntu@localhost 'mkdir -p .ssh && chmod 700 .ssh && cat >> .ssh/authorized_keys' < var/id_rsa.pub
 
 Then log into the vm and copy the `ssh` keys to root's `authorized_keys` file.
 

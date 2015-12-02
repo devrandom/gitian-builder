@@ -47,7 +47,7 @@ if [ $# = 0 ] ; then
 fi
 
 if [ -z "$USE_LXC" ]; then
-    scp $QUIET_FLAG -r -oConnectTimeout=30 -oNoHostAuthenticationForLocalhost=yes -i ${GITIAN_BASE:-.}/var/id_dsa -P $VM_SSH_PORT $1 $TUSER@localhost:$2
+    scp $QUIET_FLAG -r -oConnectTimeout=30 -oNoHostAuthenticationForLocalhost=yes -i ${GITIAN_BASE:-.}/var/id_rsa -P $VM_SSH_PORT $1 $TUSER@localhost:$2
 else
     config-lxc
     tar -C `dirname "$1"` -cf - `basename "$1"` | sudo $LXC_EXECUTE -n gitian -f var/lxc.config -- sudo -i -u $TUSER tar -C "$2" -xf -

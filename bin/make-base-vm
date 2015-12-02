@@ -81,8 +81,8 @@ fi
 
 mkdir -p var
 
-if [ ! -e var/id_dsa ]; then
-  ssh-keygen -t dsa -f var/id_dsa -N ""
+if [ ! -e var/id_rsa ]; then
+  ssh-keygen -t rsa -f var/id_rsa -N ""
 fi
 
 OUT=base-$SUITE-$ARCH
@@ -147,9 +147,9 @@ if [ $VBOX = "1" ]; then
   vagrant up "$NAME"
 
   vagrant ssh "$NAME" -c "sudo mkdir -p /root/.ssh && sudo chmod 700 /root/.ssh"
-  vagrant ssh "$NAME" -c "sudo sh -c 'cat >> /root/.ssh/authorized_keys'" < var/id_dsa.pub
+  vagrant ssh "$NAME" -c "sudo sh -c 'cat >> /root/.ssh/authorized_keys'" < var/id_rsa.pub
   vagrant ssh "$NAME" -c "sudo -u $DISTRO mkdir -p /home/$DISTRO/.ssh && sudo -u $DISTRO chmod 700 /home/$DISTRO/.ssh"
-  vagrant ssh "$NAME" -c "sudo sh -c 'cat >> /home/$DISTRO/.ssh/authorized_keys'" < var/id_dsa.pub
+  vagrant ssh "$NAME" -c "sudo sh -c 'cat >> /home/$DISTRO/.ssh/authorized_keys'" < var/id_rsa.pub
 
   VBoxManage snapshot "Gitian-$NAME" take "Gitian-Clean"
   vagrant suspend "$NAME"
@@ -184,7 +184,7 @@ else
   libexec/config-bootstrap-fixup
 
   rm -rf $OUT
-  env -i LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 sudo vmbuilder kvm $DISTRO --rootsize 10240 --arch=$ARCH --suite=$SUITE --addpkg=$addpkg --removepkg=$removepkg --ssh-key=var/id_dsa.pub --ssh-user-key=var/id_dsa.pub --mirror=$MIRROR --security-mirror=$SECURITY_MIRROR --dest=$OUT --flavour=$FLAVOUR --firstboot=`pwd`/target-bin/bootstrap-fixup
+  env -i LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 sudo vmbuilder kvm $DISTRO --rootsize 10240 --arch=$ARCH --suite=$SUITE --addpkg=$addpkg --removepkg=$removepkg --ssh-key=var/id_rsa.pub --ssh-user-key=var/id_rsa.pub --mirror=$MIRROR --security-mirror=$SECURITY_MIRROR --dest=$OUT --flavour=$FLAVOUR --firstboot=`pwd`/target-bin/bootstrap-fixup
   mv $OUT/*.qcow2 $OUT.qcow2
   rm -rf $OUT
   # bootstrap-fixup is done on first boot
