@@ -10,6 +10,27 @@ This performs a build inside a VM, with deterministic inputs and outputs.  If th
 
 ## Prerequisites:
 
+### Arch:
+
+    sudo pacman -S python2-cheetah qemu rsync
+    sudo pacman -S lxc libvirt bridge-utils # for lxc mode
+
+From AUR:
+
+* [apt-cacher-ng](https://aur.archlinux.org/packages/apt-cacher-ng/) (you may have to play with permissions (chown to apt-cacher-ng) on files to get apt-cacher-ng to start)
+* [debian-archive-keyring](https://aur.archlinux.org/packages/debian-archive-keyring/) (for making Debian guests)
+* [debootstrap](https://aur.archlinux.org/packages/debootstrap/)
+* [dpkg](https://aur.archlinux.org/packages/dpkg/)
+* [gnupg1](https://aur.archlinux.org/packages/gnupg1/)
+* [multipath-tools](https://aur.archlinux.org/packages/multipath-tools/) (for kpartx)
+* [ubuntu-keyring](https://aur.archlinux.org/packages/ubuntu-keyring/) (for making Ubuntu guests)
+
+From Launchpad:
+
+* [vmbuilder](https://launchpad.net/vmbuilder)
+
+Also, I had to modify the default /etc/sudoers file to uncomment the `secure_path` line, because vmbuilder isn't found otherwise when the `env -i ... sudo vmbuilder ...` line is executed (because the i flag resets the environment variables including the PATH).
+
 ### Gentoo:
 
     layman -a luke-jr  # needed for vmbuilder
