@@ -1,3 +1,8 @@
+2015-12-12
+----------
+
+Since OpenSSH removed support for DSS, Gitian now uses RSA keys instead. Base images should be regenerated.
+
 2015-05-16
 ----------
 
