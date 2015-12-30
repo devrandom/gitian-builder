@@ -215,6 +215,7 @@ end
 distro = build_desc["distro"] || "ubuntu"
 suites = build_desc["suites"] or raise "must supply suites"
 archs = build_desc["architectures"] or raise "must supply architectures"
+build_desc["reference_datetime"] or build_desc["remotes"].size > 0 or raise "must supply `reference_datetime` or `remotes`"
 
 ENV['DISTRO'] = distro
 
