@@ -35,7 +35,7 @@ def info(str)
   puts str unless @options[:quiet]
 end
 
-def build_one_configuration(suite, arch, build_desc, reference_datetime)
+def build_one_configuration(suite, arch, build_desc)
   FileUtils.rm_f("var/build.log")
 
   bits = @bitness[arch] or raise "unknown architecture ${arch}"
@@ -119,16 +119,24 @@ def build_one_configuration(suite, arch, build_desc, reference_datetime)
       script.puts "GBUILD_COMMON_CACHE=$HOME/cache/common"
     end
     script.puts "MAKEOPTS=(-j#{@options[:num_procs]})"
-    (ref_date, ref_time) = reference_datetime.split
-    script.puts "REFERENCE_DATETIME='#{reference_datetime}'"
-    script.puts "REFERENCE_DATE='#{ref_date}'"
-    script.puts "REFERENCE_TIME='#{ref_time}'"
     script.puts
+    author_date = nil
     build_desc["remotes"].each do |remote|
       dir = sanitize(remote["dir"], remote["dir"])
+
+      author_date = `cd inputs/#{dir} && git log --format=@%at -1 | date +"%F %T" -u -f -`.strip
+      raise "error looking up author date in #{dir}" unless $?.exitstatus == 0
+
       system! "copy-to-target #{@quiet_flag} inputs/#{dir} build/"
       script.puts "(cd build/#{dir} && git reset -q --hard && git clean -q -f -d)"
     end
+    script.puts
+    ref_datetime = build_desc["reference_datetime"] || author_date
+    (ref_date, ref_time) = ref_datetime.split
+    script.puts "REFERENCE_DATETIME='#{ref_datetime}'"
+    script.puts "REFERENCE_DATE='#{ref_date}'"
+    script.puts "REFERENCE_TIME='#{ref_time}'"
+    script.puts
     script.puts "cd build"
     script.puts build_desc["script"]
   end
@@ -207,7 +215,7 @@ end
 distro = build_desc["distro"] || "ubuntu"
 suites = build_desc["suites"] or raise "must supply suites"
 archs = build_desc["architectures"] or raise "must supply architectures"
-reference_datetime = build_desc["reference_datetime"] or raise "must supply reference_datetime"
+build_desc["reference_datetime"] or build_desc["remotes"].size > 0 or raise "must supply `reference_datetime` or `remotes`"
 
 ENV['DISTRO'] = distro
 
@@ -267,7 +275,7 @@ suites.each do |suite|
     arch = sanitize(arch, "architecture")
 
     # Build!
-    build_one_configuration(suite, arch, build_desc, reference_datetime)
+    build_one_configuration(suite, arch, build_desc)
 
     info "Grabbing results from target"
     system! "copy-from-target #{@quiet_flag} out #{build_dir}"
