@@ -81,17 +81,14 @@ if [ $# != 0 ] ; then
   done
 fi
 
-if [ $DISTRO = "debian" -a $LXC = "1" ]; then
-  echo "There is no support for Debian guests using LXC currently. Please use KVM or another distro for now."
-  exit 1
-fi
-
 if [ $DISTRO = "ubuntu" ]; then
   MIRROR=$MIRROR_BASE/archive.ubuntu.com/ubuntu
   SECURITY_MIRROR=$MIRROR_BASE/security.ubuntu.com/ubuntu
+  components=main,universe
 elif [ $DISTRO = "debian" ]; then
   MIRROR=$MIRROR_BASE/ftp.debian.org/debian
   SECURITY_MIRROR=$MIRROR_BASE/security.debian.org/
+  components=main,contrib
 fi
 
 mkdir -p var
@@ -144,6 +141,9 @@ fi
 
 if [ $LXC = "1" ]; then
   addpkg=$addpkg,lxc
+  if [ $DISTRO = "debian" ]; then
+    addpkg=$addpkg,sudo
+  fi
 else
   # Lack of comma after KERNEL_PKG is not a typo
   addpkg=$addpkg,${KERNEL_PKG}${GRUB_PKG},openssh-server
@@ -185,7 +185,9 @@ if [ $LXC = "1" ]; then
     echo "sudo will preserve (some) env flags"
     preserve_env=yes # if you would want to set false then unset this variable
   fi
-  env -i LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 DEBOOTSTRAP_DIR="$DEBOOTSTRAP_DIR" sudo ${preserve_env+--preserve-env} debootstrap --arch=$ARCH --include=$addpkg --exclude=$removepkg --components=main,universe $SUITE $OUT-bootstrap $MIRROR
+  env -i LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 DEBOOTSTRAP_DIR="$DEBOOTSTRAP_DIR" sudo ${preserve_env+--preserve-env} debootstrap --arch=$ARCH --include=$addpkg --exclude=$removepkg --components=$components $SUITE $OUT-bootstrap $MIRROR
+  # Fix lxc issue
+  sudo cp $OUT-bootstrap/usr/lib/x86_64-linux-gnu/lxc/lxc-init $OUT-bootstrap/usr/sbin/init.lxc
   dd if=/dev/zero of=$OUT-lxc bs=1M count=1 seek=10240
   /sbin/mkfs.ext4 -F $OUT-lxc
   t=`mktemp -d gitian.XXXXXXXX`

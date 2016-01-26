@@ -16,13 +16,14 @@ elif [ $DISTRIB_NAME = "Debian" ]; then
   # grub-legacy conflicts grub-pc dependencies
   # No grub-legacy on Ubuntu, just on Debian
   # Work around bcron-run conflict due to cron being removed
-  apt-get purge -y grub-legacy bcron-run &> /dev/null
+  # Needed for KVM, but apparently errors out for LXC, so the true ignores the error
+  apt-get purge -y grub-legacy bcron-run &> /dev/null || true
 fi
 echo '127.0.1.1 gitian' >> /etc/hosts
 
 # If LXC
 if grep /lxc/gitian /proc/1/cgroup > /dev/null; then
-  adduser --disabled-password --gecos ubuntu --quiet ubuntu || true
+  adduser --disabled-password --gecos ${DISTRIB_NAME,,} --quiet ${DISTRIB_NAME,,} || true
   apt-get remove -y rsyslog || true
   dpkg-divert --local --rename --add /sbin/initctl
   ln -sf /bin/true /sbin/initctl
