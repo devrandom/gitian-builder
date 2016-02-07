@@ -187,7 +187,17 @@ if [ $LXC = "1" ]; then
   fi
   env -i LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 DEBOOTSTRAP_DIR="$DEBOOTSTRAP_DIR" sudo ${preserve_env+--preserve-env} debootstrap --arch=$ARCH --include=$addpkg --exclude=$removepkg --components=$components $SUITE $OUT-bootstrap $MIRROR
   # Fix lxc issue
-  sudo cp $OUT-bootstrap/usr/lib/x86_64-linux-gnu/lxc/lxc-init $OUT-bootstrap/usr/sbin/init.lxc
+  if [ -f $OUT-bootstrap/usr/lib/lxc/lxc-init ]
+  then
+    sudo cp $OUT-bootstrap/usr/lib/lxc/lxc-init $OUT-bootstrap/usr/sbin/init.lxc
+  else
+    if [ $ARCH = "amd64" ]
+    then
+      sudo cp $OUT-bootstrap/usr/lib/x86_64-linux-gnu/lxc/lxc-init $OUT-bootstrap/usr/sbin/init.lxc
+    else
+      sudo cp $OUT-bootstrap/usr/lib/i386-linux-gnu/lxc/lxc-init $OUT-bootstrap/usr/sbin/init.lxc
+    fi
+  fi
   dd if=/dev/zero of=$OUT-lxc bs=1M count=1 seek=10240
   /sbin/mkfs.ext4 -F $OUT-lxc
   t=`mktemp -d gitian.XXXXXXXX`
