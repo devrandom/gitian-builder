@@ -72,6 +72,10 @@ def build_one_configuration(suite, arch, build_desc)
 
   system! "on-target true"
 
+  system! "on-target -u root tee -a /etc/sudoers.d/#{ENV['DISTRO'] || 'ubuntu'} > /dev/null << EOF
+%#{ENV['DISTRO'] || 'ubuntu'} ALL=(ALL) NOPASSWD: ALL
+EOF" if build_desc["sudo"] and @options[:allow_sudo]
+
   info "Preparing build environment"
   system! "on-target setarch #{@arches[arch]} bash < target-bin/init-build.sh"
 
@@ -150,6 +154,9 @@ end
 OptionParser.new do |opts|
   opts.banner = "Usage: build [options] <build-description>.yml"
 
+  opts.on("--allow-sudo", "override SECURITY on the target VM and allow the use of sudo with no password for the default user") do |v|
+    @options[:allow_sudo] = v
+  end
   opts.on("-i", "--skip-image", "reuse current target image") do |v|
     @options[:skip_image] = v
   end
