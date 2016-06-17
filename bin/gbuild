@@ -107,8 +107,22 @@ EOF" if build_desc["sudo"] and @options[:allow_sudo]
   info "Creating package manifest"
   system! "on-target -u root bash < target-bin/grab-packages.sh > var/base-#{suitearch}.manifest"
 
-  info "Creating build script (var/build-script)"
+  if build_desc.key?("prepare")
+    info "Creating prepare script (var/prepare-script)"
+    File.open("var/prepare-script", "w") do |script|
+      script.puts "#!/bin/bash"
+      script.puts "set -e"
+      script.puts "export LANG='en_US.UTF-8'"
+      script.puts "export LC_ALL='en_US.UTF-8'"
+      script.puts "umask 002"
+      script.puts build_desc["prepare"]
+    end
 
+    info "Running prepare script as root (log in var/prepare.log)"
+    system! "on-target -u root setarch #{@arches[arch]} bash -x < var/prepare-script > var/prepare.log 2>&1"
+  end
+
+  info "Creating build script (var/build-script)"
   File.open("var/build-script", "w") do |script|
     script.puts "#!/bin/bash"
     script.puts "set -e"
