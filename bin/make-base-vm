@@ -25,6 +25,21 @@ usage() {
   target VM can reach.  It may be set to 127.0.0.1, in which case it will be
   changed to 10.0.2.2 on the guest (or GITIAN_HOST_IP if it is defined)
   10.0.2.2 is the host IP as visible from the guest under qemu networking.
+
+  The DEBOOTSTRAP_DIR (but also GITIAN_SUDO_USE_DEBOOTSTRAP_DIR, see below!)
+  environment variable can be set to select a directory
+  that will contain data like in "/usr/share/debootstrap/". This allows user to
+  make a copy of this files to some local dir and modify them locally:
+  e.g. set env variable "DEBOOTSTRAP_DIR=./mydeboot/", then copy or link
+  system's version of files there, and modify them there
+  (e.g. copy your debootstrap-script file "xenial" to "./mydeboot/scripts/").
+
+  Set env GITIAN_SUDO_USE_DEBOOTSTRAP_DIR="yes" to allow sudo for debootstrap
+  to use flags like --preserve-env that are required for DEBOOTSTRAP_DIR to work.
+  It must be equal string "yes".
+  This is done as separate variable to make it clear that we modify sudo
+  behaviour here regarding security (though anyway env is cleared with
+  whitelist so should be perfectly safe).
 EOF
 }
 
@@ -164,7 +179,13 @@ if [ $LXC = "1" ]; then
   fi
   sudo rm -rf $OUT-bootstrap
   # Need universe for lxc in lucid
-  env -i LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 sudo debootstrap --arch=$ARCH --include=$addpkg --exclude=$removepkg --components=main,universe $SUITE $OUT-bootstrap $MIRROR
+
+  unset preserve_env
+  if [ "$GITIAN_SUDO_USE_DEBOOTSTRAP_DIR" = "yes" ]; then
+    echo "sudo will preserve (some) env flags"
+    preserve_env=yes # if you would want to set false then unset this variable
+  fi
+  env -i LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 DEBOOTSTRAP_DIR="$DEBOOTSTRAP_DIR" sudo ${preserve_env+--preserve-env} debootstrap --arch=$ARCH --include=$addpkg --exclude=$removepkg --components=main,universe $SUITE $OUT-bootstrap $MIRROR
   dd if=/dev/zero of=$OUT-lxc bs=1M count=1 seek=10240
   /sbin/mkfs.ext4 -F $OUT-lxc
   t=`mktemp -d gitian.XXXXXXXX`
