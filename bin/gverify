@@ -5,6 +5,8 @@ require 'yaml'
 require 'fileutils'
 require 'pathname'
 
+bold = ["\033[0m", "\033[1m"]
+
 @options = {}
 
 def system!(cmd)
@@ -33,6 +35,11 @@ OptionParser.new do |opts|
   opts.on("-v", "--verbose", "be more verbose") do |v|
     @options[:verbose] = v
   end
+  @options[:markup] = true
+  opts.on("-m", "--[no-]markup", "markup the output using ANSI escape codes") do |m|
+    @options[:markup] = m
+  end
+
   opts.on("-r REL", "--release REL", "release name") do |v|
     @options[:release] = v
   end
@@ -62,6 +69,7 @@ destination = @options[:destination] || File.join(base_dir, "sigs", package_name
 release = @options[:release] || "current"
 release = sanitize(release, "release")
 verbose = @options[:verbose]
+bold = ['', ''] unless @options[:markup]
 
 release_path = File.join(destination, release)
 
@@ -109,7 +117,8 @@ Dir.foreach(release_path) do |signer_dir|
         puts line
       end
     end
-    puts "#{signer_dir}: BAD SIGNATURE"
+    puts "#{bold[1]}#{signer_dir}: BAD SIGNATURE#{bold[0]}"
+    puts
     did_fail = true
   elsif current_manifest and (result['out_manifest'] != current_manifest or result['release'] != release or result['name'] != package_name)
     out.each_line do |line|
@@ -123,7 +132,8 @@ Dir.foreach(release_path) do |signer_dir|
         puts line
       end
     end
-    puts "#{signer_dir}: MISMATCH"
+    puts "#{bold[1]}#{signer_dir}: MISMATCH#{bold[0]}"
+    puts
     if verbose
       lines1 = current_manifest.each_line
       lines2 = result['out_manifest'].each_line
@@ -147,7 +157,8 @@ Dir.foreach(release_path) do |signer_dir|
         puts line
       end
     end
-    puts "#{signer_dir}: OK"
+    puts "#{bold[1]}#{signer_dir}: OK#{bold[0]}"
+    puts
   end
   if !current_manifest
     # take first manifest as 'current' to compare against
