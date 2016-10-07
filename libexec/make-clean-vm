@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-SUITE=lucid
+SUITE=xenial
 ARCH=amd64
 
 VMSW=KVM
@@ -17,7 +17,7 @@ usage() {
   echo
   cat << EOF
   --help     display this help and exit
-  --suite U  build suite U instead of lucid
+  --suite U  build suite U instead of xenial
   --arch A   build architecture A (e.g. i386) instead of amd64
 EOF
 }

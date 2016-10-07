@@ -2,7 +2,7 @@
 set -e
 
 DISTRO=ubuntu
-SUITE=lucid
+SUITE=xenial
 ARCH=amd64
 MIRROR_BASE=http://${MIRROR_HOST:-127.0.0.1}:3142
 LXC=0
@@ -15,7 +15,7 @@ usage() {
   cat << EOF
   --help      display this help and exit
   --distro D  build distro D (e.g. debian) instead of ubuntu
-  --suite U   build suite U instead of lucid
+  --suite U   build suite U instead of xenial
   --arch A    build architecture A (e.g. i386) instead of amd64
   --lxc       use lxc instead of kvm
   --vbox      use VirtualBox instead of kvm

@@ -111,12 +111,12 @@ Command-line `VBoxManage` must be in your `$PATH`.
 
 `make-base-vm` cannot yet make VirtualBox virtual machines ( _patches welcome_, it should be possible to use `VBoxManage`, boot-from-network Linux images and PXE booting to do it). So you must either get or manually create VirtualBox machines that:
 
-1. Are named `Gitian-<suite>-<arch>` -- e.g. Gitian-lucid-i386 for a 32-bit, Ubuntu 10 machine.
+1. Are named `Gitian-<suite>-<arch>` -- e.g. Gitian-xenial-i386 for a 32-bit, Ubuntu 16 machine.
 2. Have a booted-up snapshot named `Gitian-Clean` .  The build script resets the VM to that snapshot to get reproducible builds.
 3. Has the VM's NAT networking setup to forward port `localhost:2223` on the host machine to port `22` of the VM; e.g.:
 
 ```
-    VBoxManage modifyvm Gitian-lucid-i386 --natpf1 "guestssh,tcp,,2223,,22"
+    VBoxManage modifyvm Gitian-xenial-i386 --natpf1 "guestssh,tcp,,2223,,22"
 ```
 
 The final setup needed is to create an `ssh` key that will be used to login to the virtual machine:
@@ -140,17 +140,17 @@ Set the `USE_VBOX` environment variable to use `VBOX` instead of `KVM`:
 If you have everything set-up properly, you should be able to:
 
     PATH=$PATH:$(pwd)/libexec
-    make-clean-vm --suite lucid --arch i386
+    make-clean-vm --suite xenial --arch i386
 
     # on-target needs $DISTRO to be set to debian if using a Debian guest
     # (when running gbuild, $DISTRO is set based on the descriptor, so this line isn't needed)
     DiSTRO=debian
 
     # For LXC:
-    LXC_ARCH=i386 LXC_SUITE=lucid on-target ls -la
+    LXC_ARCH=i386 LXC_SUITE=xenial on-target ls -la
 
     # For KVM:
-    start-target 32 lucid-i386 &
+    start-target 32 xenial-i386 &
     # wait a few seconds for VM to start
     on-target ls -la
     stop-target
@@ -185,7 +185,7 @@ After you've merged everybody's signatures, verify them:
 
 * Log files are captured to the _var_ directory
 * You can run the utilities in libexec by running `PATH="libexec:$PATH"`
-* To start the target VM run `start-target 32 lucid-i386` or `start-target 64 lucid-amd64`
+* To start the target VM run `start-target 32 xenial-i386` or `start-target 64 xenial-amd64`
 * To ssh into the target run `on-target` (after setting $DISTRO to debian if using a Debian guest) or `on-target -u root`
 * On the target, the _build_ directory contains the code as it is compiled and _install_ contains intermediate libraries
 * By convention, the script in `<package>.yml` starts with any environment setup you would need to manually compile things on the target
