@@ -193,9 +193,15 @@ if [ $LXC = "1" ]; then
   else
     if [ $ARCH = "amd64" ]
     then
-      sudo cp $OUT-bootstrap/usr/lib/x86_64-linux-gnu/lxc/lxc-init $OUT-bootstrap/usr/sbin/init.lxc
+      if [ -f $OUT-bootstrap/usr/lib/x86_64-linux-gnu/lxc/lxc-init ]
+      then
+        sudo cp $OUT-bootstrap/usr/lib/x86_64-linux-gnu/lxc/lxc-init $OUT-bootstrap/usr/sbin/init.lxc
+      fi
     else
-      sudo cp $OUT-bootstrap/usr/lib/i386-linux-gnu/lxc/lxc-init $OUT-bootstrap/usr/sbin/init.lxc
+      if [ -f $OUT-bootstrap/usr/lib/i386-linux-gnu/lxc/lxc-init ]
+      then
+        sudo cp $OUT-bootstrap/usr/lib/i386-linux-gnu/lxc/lxc-init $OUT-bootstrap/usr/sbin/init.lxc
+      fi
     fi
   fi
   dd if=/dev/zero of=$OUT-lxc bs=1M count=1 seek=10240
