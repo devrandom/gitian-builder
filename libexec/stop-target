@@ -11,7 +11,7 @@ case $VMSW in
   KVM)
     if [ ! -e var/target.pid ]; then exit; fi
 
-    on-target -u root halt
+    on-target -u root poweroff
     sleep 5
 
     if [ ! -e var/target.pid ]; then exit; fi
