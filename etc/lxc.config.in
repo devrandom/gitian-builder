@@ -22,6 +22,7 @@ lxc.cgroup.devices.allow = c 254:0 rwm
 # mounts points
 lxc.mount.entry=proc ROOTFS/proc proc nodev,noexec,nosuid 0 0
 lxc.mount.entry=sysfs ROOTFS/sys sysfs defaults  0 0
+lxc.mount.entry=shm dev/shm tmpfs rw,nodev,noexec,nosuid,relatime,mode=1777,create=dir 0 0
 
 # Container with network virtualized using a pre-configured bridge named br0 and
 # veth pair virtual network devices
