@@ -100,6 +100,13 @@ EOF" if build_desc["sudo"] and @options[:allow_sudo]
   info "Installing additional packages (log in var/install.log)"
   system! "on-target -u root -e DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends -y install #{build_desc["packages"].join(" ")} > var/install.log 2>&1"
 
+  if build_desc["alternatives"]
+    info "Set alternatives (log in var/install.log)"
+    for a in build_desc["alternatives"]
+      system! "on-target -u root update-alternatives --set #{a["package"]} #{a["path"]} > var/install.log 2>&1"
+    end
+  end
+
   if @options[:upgrade] || system("on-target -u root '[ ! -e /var/cache/gitian/initial-upgrade ]'")
       info "Upgrading system, may take a while"
       system! "on-target -u root bash < target-bin/upgrade-system.sh > var/install.log 2>&1"
