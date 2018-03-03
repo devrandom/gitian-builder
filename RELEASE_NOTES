@@ -1,3 +1,12 @@
+2017-02-14
+----------
+
+- VirtualBox launches are now headless.  You can use the VirtualBox Manager to open the console UI if needed.
+- Debian on VirtualBox is supported via Vagrant Cloud images
+- Note that Debian on kvm is currently not supported because vmbuilder fails in the grub install stage
+- git submodule support - any submodules are cloned and checked out
+- Note that lxc-execute in Ubuntu 17.10 has a showstopper bug in stdin handling
+
 2015-12-12
 ----------
 

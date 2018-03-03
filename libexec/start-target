@@ -31,7 +31,7 @@ case $VMSW in
     true #sudo lxc-start -n gitian -c var/target.log -f lxc.config
     ;;
   VBOX)
-    VBoxManage startvm "Gitian-${2}" # --type headless
+    VBoxManage startvm "Gitian-${2}" --type headless
     echo "Gitian-${2}" > var/target.vmname
     ;;
 esac
