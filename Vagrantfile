@@ -5,7 +5,7 @@ set -eu
 
 sudo apt-get update -y
 sudo apt-get upgrade -y
-sudo apt-get install -y autoconf2.13 automake build-essential bsdmainutils faketime g++ g++-mingw-w64 git-core libqt4-dev libtool libz-dev mingw-w64 nsis pciutils pkg-config psmisc subversion unzip zip
+sudo apt-get install -y autoconf2.13 automake build-essential bsdmainutils faketime g++ g++-mingw-w64 git libqt4-dev libtool libz-dev mingw-w64 nsis pciutils pkg-config psmisc subversion unzip zip
 
 echo "ok"
 
