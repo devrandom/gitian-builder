@@ -48,6 +48,10 @@ If you'd like to use LXC mode instead, install it as follows:
 
     sudo apt-get install lxc
 
+If you'd like to use docker mode instead, install it as follows:
+
+    sudo apt-get install docker-ce
+
 ### Debian:
 
 See Ubuntu, and also run the following on Debian Jessie or newer:
@@ -100,6 +104,15 @@ If you are creating a Gitian descriptor, you can now specify a distro. If no dis
 Set the `USE_LXC` environment variable to use `LXC` instead of `KVM`:
 
     export USE_LXC=1
+
+### Docker
+
+    bin/make-base-vm --docker
+    bin/make-base-vm --docker --arch i386
+
+Set the `USE_DOCKER` environment variable to use `DOCKER` instead of `KVM`:
+
+    export USE_DOCKER=1
 
 ### VirtualBox
 
