@@ -11,3 +11,5 @@ base*
 sigs
 target-bin/bootstrap-fixup
 .vagrant
+docker
+*.Dockerfile
