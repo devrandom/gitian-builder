@@ -46,7 +46,9 @@ if [ $# = 0 ] ; then
   exit 1
 fi
 
-if [ -z "$USE_LXC" ]; then
+if [ -n "$USE_DOCKER" ]; then
+    docker cp gitian-target:"/home/$TUSER/$1" $2
+elif [ -z "$USE_LXC" ]; then
     src="${1%/}"  # remove trailing / which triggers special rsync behaviour
     rsync --checksum -a $QUIET_FLAG -e "ssh -oConnectTimeout=30 -oNoHostAuthenticationForLocalhost=yes -i ${GITIAN_BASE:-.}/var/id_rsa -p $VM_SSH_PORT" "$TUSER@localhost:${src}" "$2"
 else

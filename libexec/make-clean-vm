@@ -9,6 +9,8 @@ if [ -n "$USE_LXC" ]; then
     VMSW=LXC
 elif [ -n "$USE_VBOX" ]; then
     VMSW=VBOX
+elif [ -n "$USE_DOCKER" ]; then
+    VMSW=DOCKER
 fi
 
 usage() {
@@ -65,5 +67,8 @@ case $VMSW in
     ;;
   VBOX)
     VBoxManage snapshot "Gitian-${SUITE}-${ARCH}" restore "Gitian-Clean"
+    ;;
+  DOCKER)
+    true #Docker doesn't need to do anything
     ;;
 esac

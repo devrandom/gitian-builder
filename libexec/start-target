@@ -10,6 +10,8 @@ if [ -n "$USE_LXC" ]; then
     VMSW=LXC
 elif [ -n "$USE_VBOX" ]; then
     VMSW=VBOX
+elif [ -n "$USE_DOCKER" ]; then
+    VMSW=DOCKER
 fi
 
 case $VMSW in
@@ -33,5 +35,8 @@ case $VMSW in
   VBOX)
     VBoxManage startvm "Gitian-${2}" --type headless
     echo "Gitian-${2}" > var/target.vmname
+    ;;
+  DOCKER)
+    docker run -d --name gitian-target base-$SUFFIX:latest > /dev/null
     ;;
 esac
