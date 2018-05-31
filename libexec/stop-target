@@ -5,6 +5,8 @@ if [ -n "$USE_LXC" ]; then
     VMSW=LXC
 elif [ -n "$USE_VBOX" ]; then
     VMSW=VBOX
+elif [ -n "$USE_DOCKER" ]; then
+    VMSW=DOCKER
 fi
 
 case $VMSW in
@@ -29,5 +31,9 @@ case $VMSW in
     if [ ! -e var/target.vmname ]; then exit; fi
     VBoxManage controlvm `cat var/target.vmname` savestate
     rm var/target.vmname
+    ;;
+  DOCKER)
+    docker container stop gitian-target > /dev/null
+    docker container rm gitian-target > /dev/null
     ;;
 esac

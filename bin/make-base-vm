@@ -7,6 +7,7 @@ ARCH=amd64
 MIRROR_BASE=http://${MIRROR_HOST:-127.0.0.1}:3142
 LXC=0
 VBOX=0
+DOCKER=0
 
 usage() {
   echo "Usage: ${0##*/} [OPTION]..."
@@ -19,6 +20,7 @@ usage() {
   --arch A    build architecture A (e.g. i386) instead of amd64
   --lxc       use lxc instead of kvm
   --vbox      use VirtualBox instead of kvm
+  --docker    use docker instead of kvm
 
   The MIRROR_HOST environment variable can be used to change the
   apt-cacher host.  It should be something that both the host and the
@@ -68,6 +70,10 @@ if [ $# != 0 ] ; then
         ;;
       --vbox)
         VBOX=1
+        shift 1
+        ;;
+      --docker)
+        DOCKER=1
         shift 1
         ;;
       --*)
@@ -152,6 +158,32 @@ fi
 
 # Remove cron to work around vmbuilder issue when umounting /dev on target
 removepkg=cron
+
+if [ $DOCKER = "1" ]; then
+
+  addpkg=`echo $addpkg | tr ',' ' '`
+
+  mkdir -p docker
+  cd docker
+
+  # Generate the dockerfile
+  cat << EOF > $OUT.Dockerfile
+FROM $DISTRO:$SUITE
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get --no-install-recommends -y install $addpkg
+
+RUN useradd -ms /bin/bash -U $DISTRO
+USER $DISTRO:$DISTRO
+WORKDIR /home/$DISTRO
+
+CMD ["sleep", "infinity"]
+EOF
+
+  docker build --pull -f $OUT.Dockerfile -t $OUT .
+
+  exit 0
+fi
 
 if [ $VBOX = "1" ]; then
   NAME="$SUITE-$ARCH"
