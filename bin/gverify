@@ -50,6 +50,10 @@ OptionParser.new do |opts|
   opts.on("-c SIGNER", "--compare-to SIGNER", "compare other manifests to SIGNER's, if not given pick first") do |v|
     @options[:compareto] = v
   end
+
+  opts.on("-p PROG", "--verify-program PROG", "specify verification program to use (default is gpg)") do |v|
+    @options[:program] = v
+  end
 end.parse!
 
 base_dir = Pathname.new(__FILE__).expand_path.dirname.parent
@@ -70,6 +74,8 @@ release = @options[:release] || "current"
 release = sanitize(release, "release")
 verbose = @options[:verbose]
 bold = ['', ''] unless @options[:markup]
+
+program = @options[:program] || "gpg"
 
 release_path = File.join(destination, release)
 
@@ -107,8 +113,8 @@ Dir.foreach(release_path) do |signer_dir|
   end
 
   result = YAML.load_file(result_path)
-  system("gpg --keyserver pgp.mit.edu --recv-keys `gpg --quiet --batch --verify \"#{File.join(signer_path, 'signature.pgp')}\" \"#{result_path}\" 2>&1 | head -n1 | grep \"key ID\" | awk '{ print $15 }'` > /dev/null 2>&1")
-  out = `gpg --quiet --batch --verify \"#{sig_path}\" \"#{result_path}\" 2>&1`
+  system("#{program} --keyserver pgp.mit.edu --recv-keys `#{program} --quiet --batch --verify \"#{File.join(signer_path, 'signature.pgp')}\" \"#{result_path}\" 2>&1 | head -n1 | grep \"key ID\" | awk '{ print $15 }'` > /dev/null 2>&1")
+  out = `#{program} --quiet --batch --verify \"#{sig_path}\" \"#{result_path}\" 2>&1`
   if $? != 0
     out.each_line do |line|
       if line =~ /^gpg: Signature made/
