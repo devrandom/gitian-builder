@@ -237,6 +237,14 @@ distro = build_desc["distro"] || "ubuntu"
 suites = build_desc["suites"] or raise "must supply suites"
 archs = build_desc["architectures"] or raise "must supply architectures"
 build_desc["reference_datetime"] or build_desc["remotes"].size > 0 or raise "must supply `reference_datetime` or `remotes`"
+docker_image_digests = build_desc["docker_image_digests"] || []
+
+# if docker_image_digests are supplied, it must be the same length as suites
+if docker_image_digests.size > 0 and suites.size != docker_image_digests.size
+  raise "`suites` and `docker_image_digests` must both be the same size if both are supplied"
+elsif ENV["USE_DOCKER"] and docker_image_digests.size > 0 and suites.size == docker_image_digests.size
+  suites = docker_image_digests
+end
 
 ENV['DISTRO'] = distro
 

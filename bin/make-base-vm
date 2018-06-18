@@ -8,19 +8,21 @@ MIRROR_BASE=http://${MIRROR_HOST:-127.0.0.1}:3142
 LXC=0
 VBOX=0
 DOCKER=0
+DOCKER_IMAGE_HASH=""
 
 usage() {
   echo "Usage: ${0##*/} [OPTION]..."
   echo "Make a base client."
   echo
   cat << EOF
-  --help      display this help and exit
-  --distro D  build distro D (e.g. debian) instead of ubuntu
-  --suite U   build suite U instead of xenial
-  --arch A    build architecture A (e.g. i386) instead of amd64
-  --lxc       use lxc instead of kvm
-  --vbox      use VirtualBox instead of kvm
-  --docker    use docker instead of kvm
+  --help                    display this help and exit
+  --distro D                build distro D (e.g. debian) instead of ubuntu
+  --suite U                 build suite U instead of xenial
+  --arch A                  build architecture A (e.g. i386) instead of amd64
+  --lxc                     use lxc instead of kvm
+  --vbox                    use VirtualBox instead of kvm
+  --docker                  use docker instead of kvm
+  --docker-image-hash D     digest of the docker image to build from
 
   The MIRROR_HOST environment variable can be used to change the
   apt-cacher host.  It should be something that both the host and the
@@ -42,6 +44,11 @@ usage() {
   This is done as separate variable to make it clear that we modify sudo
   behaviour here regarding security (though anyway env is cleared with
   whitelist so should be perfectly safe).
+
+  The --docker-image-hash option can be used to specify the hash of a particular
+  base image to use. These hashes can be found under the "RepoDigests" field of
+  "docker image inspect <image>". They will be reported in the form "sha256:<hash>";
+  only need the <hash> part is needed
 EOF
 }
 
@@ -75,6 +82,10 @@ if [ $# != 0 ] ; then
       --docker)
         DOCKER=1
         shift 1
+        ;;
+      --docker-image-digest)
+        DOCKER_IMAGE_HASH="$2"
+        shift 2
         ;;
       --*)
         echo "unrecognized option $1"
@@ -166,9 +177,16 @@ if [ $DOCKER = "1" ]; then
   mkdir -p docker
   cd docker
 
+  if [ -n "$DOCKER_IMAGE_HASH" ]; then
+    base_image="$DISTRO@sha256:$DOCKER_IMAGE_HASH"
+    OUT=base-$DOCKER_IMAGE_HASH-$ARCH
+  else
+    base_image="$DISTRO:$SUITE"
+  fi
+
   # Generate the dockerfile
   cat << EOF > $OUT.Dockerfile
-FROM $DISTRO:$SUITE
+FROM $base_image
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get --no-install-recommends -y install $addpkg
