@@ -197,7 +197,7 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-if !ENV["USE_LXC"] and !ENV["USE_VBOX"] and !File.exist?("/dev/kvm")
+if !ENV["USE_LXC"] and !ENV["USE_DOCKER"] and !ENV["USE_VBOX"] and !File.exist?("/dev/kvm")
     $stderr.puts "\n************* WARNING: kvm not loaded, this will probably not work out\n\n"
 end
 
