@@ -1,0 +1,78 @@
+#!/bin/sh
+set -e
+
+SUITE=lucid
+ARCH=amd64
+SIZE=10G
+
+VMSW=KVM
+if [ -n "$USE_LXC" ]; then
+    VMSW=LXC
+elif [ -n "$USE_VBOX" ]; then
+    VMSW=VBOX
+fi
+
+usage() {
+  echo "Usage: ${0##*/} [OPTION]..."
+  echo "Resize target copy of the base client's disk image."
+  echo
+  cat << EOF
+  --help     display this help and exit
+  --suite U  build suite U instead of lucid
+  --arch A   build architecture A (e.g. i386) instead of amd64
+  --size N   new disk image size, in 
+EOF
+}
+
+if [ $# != 0 ] ; then
+  while true ; do
+    case "$1" in
+      --help|-h)
+        usage
+        exit 0
+        ;;
+      --suite|-s)
+        SUITE="$2"
+        shift 2
+        ;;
+      --arch|-a)
+        ARCH="$2"
+        shift 2
+        ;;
+      --size)
+        SIZE="$2"
+        shift 2
+        ;;
+      --*)
+        echo "unrecognized option $1"
+        exit 1
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+fi
+
+export LXC_SUITE=$SUITE
+export LXC_ARCH=$ARCH
+
+OUT=target-$SUITE-$ARCH
+
+case $VMSW in
+  KVM)
+    out="$(qemu-img resize -f qcow2 "$OUT.qcow2" "$SIZE" || echo FAILED)"
+    if grep -q "shrink" <<<"$out"; then
+        echo "Disk image already large enough."
+        exit 0
+    elif grep -q "FAILED" <<<"$out"; then
+        exit 1
+    else
+        echo "$out"
+    fi
+    ;;
+  *)
+    echo "Growing disk images not supported with $VMSW" >&2
+    exit 1
+    ;;
+esac
