@@ -55,6 +55,11 @@ def build_one_configuration(suite, arch, build_desc)
   unless @options[:skip_image]
     info "Making a new image copy"
     system! "make-clean-vm --suite #{suite} --arch #{arch}"
+
+    if @options[:disksize]
+      info "Growing target disk image"
+      system! "grow-target-vm --suite #{suite} --arch #{arch} --size #{@options[:disksize]}G"
+    end
   end
 
   info "Starting target"
@@ -76,7 +81,20 @@ def build_one_configuration(suite, arch, build_desc)
 %#{ENV['DISTRO'] || 'ubuntu'} ALL=(ALL) NOPASSWD: ALL
 EOF" if build_desc["sudo"] and @options[:allow_sudo]
 
+  if build_desc["multiarch"]
+    info "Adding multiarch support (log in var/install.log)"
+    for a in build_desc["multiarch"]
+      system! "on-target -u root dpkg --add-architecture #{a} > var/install.log 2>&1"
+    end
+  end
+
+  info "Updating apt-get repository (log in var/install.log)"
+  system! "on-target -u root apt-get update > var/install.log 2>&1"
+
   info "Preparing build environment"
+  if @options[:disksize]
+    system! "on-target -u root bash < target-bin/complete-resize.sh > var/install.log 2>&1"
+  end
   system! "on-target setarch #{@arches[arch]} bash < target-bin/init-build.sh"
 
   build_desc["files"].each do |filename|
@@ -93,16 +111,6 @@ EOF" if build_desc["sudo"] and @options[:allow_sudo]
       system! "copy-to-target #{@quiet_flag} cache/common/ cache/"
     end
   end
-
-  if build_desc["multiarch"]
-    info "Adding multiarch support (log in var/install.log)"
-    for a in build_desc["multiarch"]
-      system! "on-target -u root dpkg --add-architecture #{a} > var/install.log 2>&1"
-    end
-  end
-
-  info "Updating apt-get repository (log in var/install.log)"
-  system! "on-target -u root apt-get update > var/install.log 2>&1"
 
   info "Installing additional packages (log in var/install.log)"
   system! "on-target -u root -e DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends -y install #{build_desc["packages"].join(" ")} > var/install.log 2>&1"
@@ -185,6 +193,9 @@ OptionParser.new do |opts|
   end
   opts.on("-m MEM", "--memory MEM", "memory to allocate in MiB") do |v|
     @options[:memory] = v
+  end
+  opts.on("--disksize SIZE", "grow disk image to size in GiB") do |v|
+    @options[:disksize] = v
   end
   opts.on("-c PAIRS", "--commit PAIRS", "comma separated list of DIRECTORY=COMMIT pairs") do |v|
     @options[:commit] = v
