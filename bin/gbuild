@@ -72,6 +72,8 @@ def build_one_configuration(suite, arch, build_desc)
 
   system! "on-target true"
 
+  system! "on-target -u root '/etc/init.d/cron stop ; killall -vw apt.systemd.daily ; killall -vw unattended-upgrade ; true' > var/install.log 2>&1"
+
   system! "on-target -u root tee -a /etc/sudoers.d/#{ENV['DISTRO'] || 'ubuntu'} > /dev/null << EOF
 %#{ENV['DISTRO'] || 'ubuntu'} ALL=(ALL) NOPASSWD: ALL
 EOF" if build_desc["sudo"] and @options[:allow_sudo]
