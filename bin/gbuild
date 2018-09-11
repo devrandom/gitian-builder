@@ -36,6 +36,7 @@ def info(str)
 end
 
 def build_one_configuration(suite, arch, build_desc)
+  FileUtils.rm_f("var/install.log")
   FileUtils.rm_f("var/build.log")
 
   bits = @bitness[arch] or raise "unknown architecture ${arch}"
@@ -97,26 +98,26 @@ EOF" if build_desc["sudo"] and @options[:allow_sudo]
   if build_desc["multiarch"]
     info "Adding multiarch support (log in var/install.log)"
     for a in build_desc["multiarch"]
-      system! "on-target -u root dpkg --add-architecture #{a} > var/install.log 2>&1"
+      system! "on-target -u root dpkg --add-architecture #{a} >> var/install.log 2>&1"
     end
   end
 
   info "Updating apt-get repository (log in var/install.log)"
-  system! "on-target -u root apt-get update > var/install.log 2>&1"
+  system! "on-target -u root apt-get update >> var/install.log 2>&1"
 
   info "Installing additional packages (log in var/install.log)"
-  system! "on-target -u root -e DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends -y install #{build_desc["packages"].join(" ")} > var/install.log 2>&1"
+  system! "on-target -u root -e DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends -y install #{build_desc["packages"].join(" ")} >> var/install.log 2>&1"
 
   if build_desc["alternatives"]
     info "Set alternatives (log in var/install.log)"
     for a in build_desc["alternatives"]
-      system! "on-target -u root update-alternatives --set #{a["package"]} #{a["path"]} > var/install.log 2>&1"
+      system! "on-target -u root update-alternatives --set #{a["package"]} #{a["path"]} >> var/install.log 2>&1"
     end
   end
 
   if @options[:upgrade] || system("on-target -u root '[ ! -e /var/cache/gitian/initial-upgrade ]'")
-      info "Upgrading system, may take a while"
-      system! "on-target -u root bash < target-bin/upgrade-system.sh > var/install.log 2>&1"
+      info "Upgrading system, may take a while (log in var/install.log)"
+      system! "on-target -u root bash < target-bin/upgrade-system.sh >> var/install.log 2>&1"
   end
   info "Creating package manifest"
   system! "on-target -u root bash < target-bin/grab-packages.sh > var/base-#{suitearch}.manifest"
