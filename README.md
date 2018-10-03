@@ -18,12 +18,15 @@ This performs a build inside a VM, with deterministic inputs and outputs.  If th
 From AUR:
 
 * [apt-cacher-ng](https://aur.archlinux.org/packages/apt-cacher-ng/) (you may have to play with permissions (chown to apt-cacher-ng) on files to get apt-cacher-ng to start)
-* [debian-archive-keyring](https://aur.archlinux.org/packages/debian-archive-keyring/) (for making Debian guests)
-* [debootstrap](https://aur.archlinux.org/packages/debootstrap/)
+* [debootstrap](https://aur.archlinux.org/packages/debootstrap-git/)
 * [dpkg](https://aur.archlinux.org/packages/dpkg/)
 * [gnupg1](https://aur.archlinux.org/packages/gnupg1/)
 * [multipath-tools](https://aur.archlinux.org/packages/multipath-tools/) (for kpartx)
-* [ubuntu-keyring](https://aur.archlinux.org/packages/ubuntu-keyring/) (for making Ubuntu guests)
+
+Non-AUR packages:
+
+* [debian-archive-keyring](https://packages.debian.org/jessie/debian-archive-keyring) (for making Debian guests)
+* [ubuntu-keyring](https://packages.ubuntu.com/search?keywords=ubuntu-keyring) (for making Ubuntu guests)
 
 From newroco on GitHub:
 
@@ -216,7 +219,7 @@ Right now `lxc-start` is the default, but you can force `lxc-execute` (useful fo
 
     export LXC_EXECUTE=lxc-execute
 
-Recent distributions allow lxc-execute / lxc-start to be run by non-priviledged users, so you might be able to rip-out the `sudo` calls in `libexec/*`.
+Recent distributions allow lxc-execute / lxc-start to be run by non-privileged users, so you might be able to rip-out the `sudo` calls in `libexec/*`.
 
 If you have a runaway `lxc-start` command, just use `kill -9` on it.
 
