@@ -184,12 +184,20 @@ if [ $DOCKER = "1" ]; then
     base_image="$DISTRO:$SUITE"
   fi
 
+  if [ $DISTRO = "centos" ]; then
+      UPDATE_FROM_REPO="yum -y update && yum -y install epel-release"
+      INSTALL_FROM_REPO="yum -y install"
+  else
+      UPDATE_FROM_REPO="apt-get update"
+      INSTALL_FROM_REPO="apt-get --no-install-recommends -y install"
+  fi
+
   # Generate the dockerfile
   cat << EOF > $OUT.Dockerfile
 FROM $base_image
 
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get --no-install-recommends -y install $addpkg
+RUN $UPDATE_FROM_REPO && $INSTALL_FROM_REPO $addpkg
 
 RUN useradd -ms /bin/bash -U $DISTRO
 USER $DISTRO:$DISTRO

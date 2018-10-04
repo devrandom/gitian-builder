@@ -46,6 +46,12 @@ def build_one_configuration(suite, arch, build_desc)
       ENV["LXC_SUITE"] = suite
   end
 
+  if ENV["USE_DOCKER"] and build_desc["distro"].eql? "centos"
+    ontarget_root_extra = "-w /root"
+  else
+    ontarget_root_extra = ""
+  end
+
   suitearch = "#{suite}-#{arch}"
 
   info "Stopping target if it is up"
@@ -73,7 +79,7 @@ def build_one_configuration(suite, arch, build_desc)
 
   system! "on-target true"
 
-  system! "on-target -u root tee -a /etc/sudoers.d/#{ENV['DISTRO'] || 'ubuntu'} > /dev/null << EOF
+  system! "on-target -u root #{ontarget_root_extra} tee -a /etc/sudoers.d/#{ENV['DISTRO'] || 'ubuntu'} > /dev/null << EOF
 %#{ENV['DISTRO'] || 'ubuntu'} ALL=(ALL) NOPASSWD: ALL
 EOF" if build_desc["sudo"] and @options[:allow_sudo]
 
@@ -98,29 +104,55 @@ EOF" if build_desc["sudo"] and @options[:allow_sudo]
   if build_desc["multiarch"]
     info "Adding multiarch support (log in var/install.log)"
     for a in build_desc["multiarch"]
-      system! "on-target -u root dpkg --add-architecture #{a} >> var/install.log 2>&1"
+      system! "on-target -u root #{ontarget_root_extra} dpkg --add-architecture #{a} >> var/install.log 2>&1"
     end
   end
 
-  info "Updating apt-get repository (log in var/install.log)"
-  system! "on-target -u root apt-get update >> var/install.log 2>&1"
+  case build_desc["distro"]
+  when "centos"
+    info "Updating yum repository (log in var/install.log)"
+    system! "on-target -u root #{ontarget_root_extra} yum -y makecache fast >> var/install.log 2>&1"
+  else
+    info "Updating apt-get repository (log in var/install.log)"
+    system! "on-target -u root #{ontarget_root_extra} apt-get update >> var/install.log 2>&1"
+  end
 
   info "Installing additional packages (log in var/install.log)"
-  system! "on-target -u root -e DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends -y install #{build_desc["packages"].join(" ")} >> var/install.log 2>&1"
+
+  case build_desc["distro"]
+  when "centos"
+    system! "on-target -u root #{ontarget_root_extra} yum -y install #{build_desc["packages"].join(" ")} > var/install.log 2>&1"
+  else
+    system! "on-target -u root #{ontarget_root_extra} -e DEBIAN_FRONTEND=noninteractive apt-get --no-install-recommends -y install #{build_desc["packages"].join(" ")} >> var/install.log 2>&1"
+  end
 
   if build_desc["alternatives"]
     info "Set alternatives (log in var/install.log)"
     for a in build_desc["alternatives"]
-      system! "on-target -u root update-alternatives --set #{a["package"]} #{a["path"]} >> var/install.log 2>&1"
+      system! "on-target -u root #{ontarget_root_extra} update-alternatives --set #{a["package"]} #{a["path"]} >> var/install.log 2>&1"
     end
   end
 
-  if @options[:upgrade] || system("on-target -u root '[ ! -e /var/cache/gitian/initial-upgrade ]'")
+  if @options[:upgrade] || system("on-target -u root #{ontarget_root_extra} '[ ! -e /var/cache/gitian/initial-upgrade ]'")
       info "Upgrading system, may take a while (log in var/install.log)"
-      system! "on-target -u root bash < target-bin/upgrade-system.sh >> var/install.log 2>&1"
+      case build_desc["distro"]
+      when "centos"
+        system! "on-target -u root #{ontarget_root_extra} mkdir -p /var/cache/gitian"
+        system! "on-target -u root #{ontarget_root_extra} yum -y update > var/upgrade.log 2>&1"
+        system! "copy-to-target #{@quiet_flag} var/upgrade.log /var/cache/gitian/upgrade.log"
+        system! "on-target -u root #{ontarget_root_extra} touch /var/cache/gitian/initial-upgrade"
+      else
+        system! "on-target -u root #{ontarget_root_extra}  bash < target-bin/upgrade-system.sh >> var/install.log 2>&1"
+      end
   end
   info "Creating package manifest"
-  system! "on-target -u root bash < target-bin/grab-packages.sh > var/base-#{suitearch}.manifest"
+
+  case build_desc["distro"]
+  when "centos"
+    system! "on-target -u root #{ontarget_root_extra} yumdb get checksum_data | awk '/checksum_data =/ { print $3,  package; next } { package=$1 }' | sort --key 2 > var/base-#{suitearch}.manifest"
+  else
+    system! "on-target -u root #{ontarget_root_extra} bash < target-bin/grab-packages.sh > var/base-#{suitearch}.manifest"
+  end
 
   info "Creating build script (var/build-script)"
 
@@ -143,7 +175,7 @@ EOF" if build_desc["sudo"] and @options[:allow_sudo]
     build_desc["remotes"].each do |remote|
       dir = sanitize(remote["dir"], remote["dir"])
 
-      author_date = `cd inputs/#{dir} && git log --format=@%at -1 | date +"%F %T" -u -f -`.strip
+      author_date = `cd inputs/#{dir} > /dev/null && git log --format=@%at -1 | date +"%F %T" -u -f -`.strip
       raise "error looking up author date in #{dir}" unless $?.exitstatus == 0
 
       system! "copy-to-target #{@quiet_flag} inputs/#{dir} build/"
@@ -220,11 +252,13 @@ in_sums = []
 build_dir = 'build'
 result_dir = 'result'
 cache_dir = 'cache'
+work_dir = 'var'
 enable_cache = build_desc["enable_cache"]
 
 FileUtils.rm_rf(build_dir)
 FileUtils.mkdir(build_dir)
 FileUtils.mkdir_p(result_dir)
+FileUtils.mkdir_p(work_dir)
 
 package_name = build_desc["name"] or raise "must supply name"
 package_name = sanitize(package_name, "package name")
@@ -290,12 +324,14 @@ build_desc["remotes"].each do |remote|
   end
   system!("cd inputs/#{dir} && git fetch --update-head-ok #{sanitize_path(remote["url"], remote["url"])} +refs/tags/*:refs/tags/* +refs/heads/*:refs/heads/*")
   commit = sanitize(remote["commit"], remote["commit"])
-  commit = `cd inputs/#{dir} && git log --format=%H -1 #{commit}`.strip
+  commit = `cd inputs/#{dir} > /dev/null && git log --format=%H -1 #{commit}`.strip
   raise "error looking up commit for tag #{remote["commit"]}" unless $?.exitstatus == 0
+  info("commit is #{commit}")
   system!("cd inputs/#{dir} && git checkout -q #{commit}")
   system!("cd inputs/#{dir} && git submodule update --init --recursive --force")
   in_sums << "git:#{commit} #{dir}"
 end
+
 
 base_manifests = YAML::Omap.new
 
@@ -333,7 +369,7 @@ Dir.glob(File.join(out_dir, '**', '*'), File::FNM_DOTMATCH).sort.each do |file_i
   next if File.directory?(file_in_out)
   file = file_in_out.sub(out_dir + File::SEPARATOR, '')
   file = sanitize_path(file, file_in_out)
-  out_sums[file] = `cd #{out_dir} && sha256sum #{file}`
+  out_sums[file] = `cd #{out_dir} > /dev/null && sha256sum #{file}`
   raise "failed to sum #{file}" unless $? == 0
   puts out_sums[file] unless @options[:quiet]
 end
@@ -343,7 +379,7 @@ if enable_cache
     next if File.directory?(file_in_out)
     file = file_in_out.sub(cache_common_dir + File::SEPARATOR, '')
     file = sanitize_path(file, file_in_out)
-    cache_common_sums[file] = `cd #{cache_common_dir} && sha256sum #{file}`
+    cache_common_sums[file] = `cd #{cache_common_dir} > /dev/null && sha256sum #{file}`
     raise "failed to sum #{file}" unless $? == 0
   end
 
@@ -351,7 +387,7 @@ if enable_cache
     next if File.directory?(file_in_out)
     file = file_in_out.sub(cache_package_dir + File::SEPARATOR, '')
     file = sanitize_path(file, file_in_out)
-    cache_package_sums[file] = `cd #{cache_package_dir} && sha256sum #{file}`
+    cache_package_sums[file] = `cd #{cache_package_dir} > /dev/null && sha256sum #{file}`
     raise "failed to sum #{file}" unless $? == 0
   end
 end
