@@ -158,7 +158,7 @@ If you have everything set-up properly, you should be able to:
 
     # on-target needs $DISTRO to be set to debian if using a Debian guest
     # (when running gbuild, $DISTRO is set based on the descriptor, so this line isn't needed)
-    DiSTRO=debian
+    DISTRO=debian
 
     # For LXC:
     LXC_ARCH=i386 LXC_SUITE=xenial on-target ls -la
