@@ -159,7 +159,7 @@ EOF" if build_desc["sudo"] and @options[:allow_sudo]
     script.puts "cd build"
     script.puts build_desc["script"]
   end
-  
+
   info "Running build script (log in var/build.log)"
   if ENV["CI"]
     system! "on-target setarch #{@arches[arch]} bash -x < var/build-script 2>&1 | tee var/build.log"
