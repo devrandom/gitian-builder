@@ -30,6 +30,18 @@ if [ $# != 0 ] ; then
         ENV="$2"
         shift 2
         ;;
+      --workdir|-w)
+        if [ -n "$USE_DOCKER" ]; then
+            if docker exec -u root -w /root gitian-target true > /dev/null 2>&1; then
+			# newer docker version is strict about non-default-user working dir
+                TWORKDIR="-w $2"
+            fi
+            shift 2
+        else
+            echo "unrecognized option $1"
+            exit 1
+        fi
+        ;;
       --*)
         echo "unrecognized option $1"
         exit 1
@@ -47,7 +59,7 @@ fi
 #fi
 
 if [ -n "$USE_DOCKER" ]; then
-    docker exec -u $TUSER -i gitian-target $*
+    docker exec -u $TUSER $TWORKDIR -i gitian-target $*
 elif [ -z "$USE_LXC" ]; then
     ssh -oConnectTimeout=30 -oNoHostAuthenticationForLocalhost=yes -i ${GITIAN_BASE:-.}/var/id_rsa -p $VM_SSH_PORT $TUSER@localhost $*
 else
