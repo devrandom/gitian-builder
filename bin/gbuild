@@ -285,15 +285,15 @@ build_desc["remotes"].each do |remote|
     remote["url"] = urls[remote["dir"]]
   end
   dir = sanitize(remote["dir"], remote["dir"])
-  unless File.exist?("inputs/#{dir}")
-      system!("git init inputs/#{dir}")
-  end
-  system!("cd inputs/#{dir} && git fetch --update-head-ok #{sanitize_path(remote["url"], remote["url"])} +refs/tags/*:refs/tags/* +refs/heads/*:refs/heads/*")
   commit = sanitize(remote["commit"], remote["commit"])
+  unless File.exist?("inputs/#{dir}")
+    system!("git init inputs/#{dir}")
+    system!("cd inputs/#{dir} && git fetch --update-head-ok #{sanitize_path(remote["url"], remote["url"])} +refs/tags/*:refs/tags/* +refs/heads/*:refs/heads/*")
+    system!("cd inputs/#{dir} && git checkout -q #{commit}")
+    system!("cd inputs/#{dir} && git submodule update --init --recursive --force")
+  end
   commit = `cd inputs/#{dir} && git log --format=%H -1 #{commit}`.strip
   raise "error looking up commit for tag #{remote["commit"]}" unless $?.exitstatus == 0
-  system!("cd inputs/#{dir} && git checkout -q #{commit}")
-  system!("cd inputs/#{dir} && git submodule update --init --recursive --force")
   in_sums << "git:#{commit} #{dir}"
 end
 
