@@ -196,6 +196,9 @@ OptionParser.new do |opts|
   opts.on("-o", "--cache-read-only", "only use existing cache files, do not update them") do |v|
     @options[:cache_ro] = v
   end
+  opts.on("--skip-fetch", "skip fetching the latest git objects and refs from the remote source") do |v|
+    @options[:skip_fetch] = v
+  end
 end.parse!
 
 if !ENV["USE_LXC"] and !ENV["USE_DOCKER"] and !ENV["USE_VBOX"] and !File.exist?("/dev/kvm")
@@ -288,6 +291,8 @@ build_desc["remotes"].each do |remote|
   commit = sanitize(remote["commit"], remote["commit"])
   unless File.exist?("inputs/#{dir}")
     system!("git init inputs/#{dir}")
+  end
+  if !@options[:skip_fetch]
     system!("cd inputs/#{dir} && git fetch --update-head-ok #{sanitize_path(remote["url"], remote["url"])} +refs/tags/*:refs/tags/* +refs/heads/*:refs/heads/*")
     system!("cd inputs/#{dir} && git checkout -q #{commit}")
     system!("cd inputs/#{dir} && git submodule update --init --recursive --force")
