@@ -1,3 +1,8 @@
+2019-05-23
+----------
+
+- Add `--skip-fetch` argument that skips fetching the latest remote source
+
 2019-05-13
 ----------
 
