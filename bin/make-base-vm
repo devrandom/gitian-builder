@@ -4,6 +4,7 @@ set -e
 DISTRO=ubuntu
 SUITE=xenial
 ARCH=amd64
+DISKSIZE=12287
 LXC=0
 VBOX=0
 DOCKER=0
@@ -18,6 +19,7 @@ usage() {
   --distro D                build distro D (e.g. debian) instead of ubuntu
   --suite U                 build suite U instead of xenial
   --arch A                  build architecture A (e.g. i386) instead of amd64
+  --disksize S              disk/image size S in MB (default 12287)
   --lxc                     use lxc instead of kvm
   --vbox                    use VirtualBox instead of kvm
   --docker                  use docker instead of kvm
@@ -68,6 +70,10 @@ if [ $# != 0 ] ; then
         ;;
       --arch|-a)
         ARCH="$2"
+        shift 2
+        ;;
+      --disksize)
+        DISKSIZE="$2"
         shift 2
         ;;
       --lxc)
@@ -271,7 +277,7 @@ if [ $LXC = "1" ]; then
       fi
     fi
   fi
-  dd if=/dev/zero of=$OUT-lxc bs=1M count=1 seek=12287
+  dd if=/dev/zero of=$OUT-lxc bs=1M count=1 seek=$DISKSIZE
   /sbin/mkfs.ext4 -F $OUT-lxc
   t=`mktemp -d gitian.XXXXXXXX`
   sudo mount $OUT-lxc $t
@@ -290,7 +296,7 @@ else
   libexec/config-bootstrap-fixup
 
   rm -rf $OUT
-  env -i LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 sudo vmbuilder kvm $DISTRO --rootsize 10240 --arch=$ARCH --suite=$SUITE --addpkg=$addpkg --removepkg=$removepkg --ssh-key=var/id_rsa.pub --ssh-user-key=var/id_rsa.pub --mirror=$MIRROR --security-mirror=$SECURITY_MIRROR --dest=$OUT --flavour=$FLAVOUR --firstboot=`pwd`/target-bin/bootstrap-fixup
+  env -i LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 sudo vmbuilder kvm $DISTRO --rootsize $DISKSIZE --arch=$ARCH --suite=$SUITE --addpkg=$addpkg --removepkg=$removepkg --ssh-key=var/id_rsa.pub --ssh-user-key=var/id_rsa.pub --mirror=$MIRROR --security-mirror=$SECURITY_MIRROR --dest=$OUT --flavour=$FLAVOUR --firstboot=`pwd`/target-bin/bootstrap-fixup
   mv $OUT/*.qcow2 $OUT.qcow2
   rm -rf $OUT
   # bootstrap-fixup is done on first boot
