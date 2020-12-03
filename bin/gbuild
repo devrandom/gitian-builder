@@ -318,7 +318,7 @@ build_desc["remotes"].each do |remote|
     system!("git init inputs/#{dir}")
   end
   if !@options[:skip_fetch]
-    system!("cd inputs/#{dir} && git fetch --update-head-ok #{sanitize_path(remote["url"], remote["url"])} +refs/tags/*:refs/tags/* +refs/heads/*:refs/heads/*")
+    system!("cd inputs/#{dir} && git fetch --update-head-ok #{sanitize_path(remote["url"], remote["url"])} #{commit}")
     system!("cd inputs/#{dir} && git checkout -q #{commit}")
     system!("cd inputs/#{dir} && git submodule update --init --recursive --force")
   end
