@@ -322,7 +322,7 @@ build_desc["remotes"].each do |remote|
     system!("cd inputs/#{dir} && git checkout -q tobuild")
     system!("cd inputs/#{dir} && git submodule update --init --recursive --force")
   end
-  commit = `cd inputs/#{dir} && git log --format=%H -1 #{commit}`.strip
+  commit = `cd inputs/#{dir} && git log --format=%H -1 tobuild`.strip
   raise "error looking up commit for tag #{remote["commit"]}" unless $?.exitstatus == 0
   in_sums << "git:#{commit} #{dir}"
 end
