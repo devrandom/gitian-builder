@@ -147,7 +147,7 @@ if [ $DISTRO = "debian" ]; then
   LOCALE_PKG=locales
 fi
 
-addpkg=pciutils,build-essential,git,subversion,$LOCALE_PKG,wget,lsb-release
+addpkg=pciutils,build-essential,git,subversion,$LOCALE_PKG,wget,lsb-release,sudo
 
 if [ $DISTRO = "ubuntu" ]; then
   # Need comma at end to work around an issue with apt for Debian <= Wheezy regarding empty strings
@@ -171,9 +171,6 @@ fi
 
 if [ $LXC = "1" ]; then
   addpkg=$addpkg,lxc
-  if [ $DISTRO = "debian" ]; then
-    addpkg=$addpkg,sudo
-  fi
 else
   # Lack of comma after KERNEL_PKG is not a typo
   addpkg=$addpkg,${KERNEL_PKG}${GRUB_PKG},openssh-server
