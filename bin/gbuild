@@ -156,6 +156,8 @@ EOF"
       script.puts "GBUILD_COMMON_CACHE=$HOME/cache/common"
     end
     script.puts "MAKEOPTS=(-j#{@options[:num_procs]})"
+    script.puts "NUM_PROCS=#{@options[:num_procs]}"
+    script.puts "NUM_MEM=#{@options[:memory]}"
     script.puts
     author_date = nil
     build_desc["remotes"].each do |remote|
