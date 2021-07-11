@@ -37,6 +37,10 @@ case $VMSW in
     echo "Gitian-${2}" > var/target.vmname
     ;;
   DOCKER)
-    docker run -d --name gitian-target base-$SUFFIX:latest > /dev/null
+    EXTRA_ARGS=""
+    if [ -n "$GITIAN_ALLOW_PRIVILEGED" ]; then
+        EXTRA_ARGS="--privileged"
+    fi
+    docker run -d --name gitian-target $EXTRA_ARGS base-$SUFFIX:latest > /dev/null
     ;;
 esac
