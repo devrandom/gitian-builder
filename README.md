@@ -43,9 +43,13 @@ Also, I had to modify the default /etc/sudoers file to uncomment the `secure_pat
 
 ### Ubuntu:
 
+By default and for regular build, `apt-cacher` server is used to cache dependencies. Install following packages to enable it, otherwise use `--disable-apt-cacher` :
+
+    sudo apt-get install apache2 apt-cacher-ng
+
 This pulls in all pre-requisites for KVM building on Ubuntu:
 
-    sudo apt-get install git apache2 apt-cacher-ng python-vm-builder ruby qemu-utils
+    sudo apt-get install git python-vm-builder ruby qemu-utils
 
 If you'd like to use LXC mode instead, install it as follows:
 
@@ -67,7 +71,7 @@ On Debian Wheezy you run the same command, but you must first add backports to y
 
     sudo port install ruby coreutils
     export PATH=$PATH:/opt/local/libexec/gnubin  # Needed for sha256sum
-    
+
 ### OSX with Homebrew:
 
     brew install ruby coreutils
