@@ -221,7 +221,7 @@ WORKDIR /home/$DISTRO
 CMD ["sleep", "infinity"]
 EOF
 
-  docker build --network host --pull -f $OUT.Dockerfile -t $OUT .
+  docker build --pull -f $OUT.Dockerfile -t $OUT .
 
   exit 0
 fi
