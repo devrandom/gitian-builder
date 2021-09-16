@@ -37,6 +37,6 @@ case $VMSW in
     echo "Gitian-${2}" > var/target.vmname
     ;;
   DOCKER)
-    docker run --network host -d --name gitian-target base-$SUFFIX:latest > /dev/null
+    docker run -d --name gitian-target base-$SUFFIX:latest > /dev/null
     ;;
 esac
