@@ -5,11 +5,11 @@ SUITE=xenial
 ARCH=amd64
 
 VMSW=KVM
-if [ -n "$USE_LXC" ]; then
+if [ "$USE_LXC" -eq 1 ]; then
     VMSW=LXC
-elif [ -n "$USE_VBOX" ]; then
+elif [ "$USE_VBOX" -eq 1 ]; then
     VMSW=VBOX
-elif [ -n "$USE_DOCKER" ]; then
+elif [ "$USE_DOCKER" -eq 1 ]; then
     VMSW=DOCKER
 fi
 

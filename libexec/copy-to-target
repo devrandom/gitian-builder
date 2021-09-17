@@ -46,14 +46,14 @@ if [ $# = 0 ] ; then
   exit 1
 fi
 
-if [ -n "$USE_DOCKER" ]; then
+if [ "$USE_DOCKER" -eq 1 ]; then
     docker exec -u $TUSER gitian-target mkdir -p "/home/$TUSER/$2"
     docker cp "$1" gitian-target:"/home/$TUSER/$2"
     docker exec -u root gitian-target chown -R $TUSER:$TUSER "/home/$TUSER/$2"
-elif [ -z "$USE_LXC" ]; then
-    src="${1%/}"  # remove trailing / which triggers special rsync behaviour
-    rsync --checksum -a $QUIET_FLAG -e "ssh -oConnectTimeout=30 -oNoHostAuthenticationForLocalhost=yes -i ${GITIAN_BASE:-.}/var/id_rsa -p $VM_SSH_PORT" "${src}" "$TUSER@localhost:$2"
-else
+elif [ "$USE_LXC" -eq 1 ]; then
     config-lxc
     tar -C `dirname "$1"` -cf - `basename "$1"` | sudo $LXC_EXECUTE -n gitian -f var/lxc.config -- sudo -i -u $TUSER tar -C "$2" -xf -
+else
+    src="${1%/}"  # remove trailing / which triggers special rsync behaviour
+    rsync --checksum -a $QUIET_FLAG -e "ssh -oConnectTimeout=30 -oNoHostAuthenticationForLocalhost=yes -i ${GITIAN_BASE:-.}/var/id_rsa -p $VM_SSH_PORT" "${src}" "$TUSER@localhost:$2"
 fi

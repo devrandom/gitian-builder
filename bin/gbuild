@@ -43,7 +43,7 @@ def build_one_configuration(suite, arch, build_desc)
 
   bits = @bitness[arch] or raise "unknown architecture ${arch}"
 
-  if ENV["USE_LXC"]
+  if ENV["USE_LXC"] == "1"
       ENV["LXC_ARCH"] = arch
       ENV["LXC_SUITE"] = suite
   end
@@ -228,7 +228,7 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-if !ENV["USE_LXC"] and !ENV["USE_DOCKER"] and !ENV["USE_VBOX"] and !File.exist?("/dev/kvm")
+if ENV["USE_LXC"] != "1" and ENV["USE_DOCKER"] != "1" and ENV["USE_VBOX"] != "1" and !File.exist?("/dev/kvm")
     $stderr.puts "\n************* WARNING: kvm not loaded, this will probably not work out\n\n"
 end
 
@@ -273,7 +273,7 @@ docker_image_digests = build_desc["docker_image_digests"] || []
 # if docker_image_digests are supplied, it must be the same length as suites
 if docker_image_digests.size > 0 and suites.size != docker_image_digests.size
   raise "`suites` and `docker_image_digests` must both be the same size if both are supplied"
-elsif ENV["USE_DOCKER"] and docker_image_digests.size > 0 and suites.size == docker_image_digests.size
+elsif ENV["USE_DOCKER"] == "1" and docker_image_digests.size > 0 and suites.size == docker_image_digests.size
   suites = docker_image_digests
 end
 
