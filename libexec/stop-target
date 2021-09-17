@@ -1,11 +1,11 @@
 #!/bin/sh
 
 VMSW=KVM
-if [ "$USE_LXC" -eq 1 ]; then
+if [ "$USE_LXC" = "1" ]; then
     VMSW=LXC
-elif [ "$USE_VBOX" -eq 1 ]; then
+elif [ "$USE_VBOX" = "1" ]; then
     VMSW=VBOX
-elif [ "$USE_DOCKER" -eq 1 ]; then
+elif [ "$USE_DOCKER" = "1" ]; then
     VMSW=DOCKER
 fi
 

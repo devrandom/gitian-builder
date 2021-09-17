@@ -46,10 +46,10 @@ if [ $# = 0 ] ; then
   exit 1
 fi
 
-if [ "$USE_DOCKER" -eq 1 ]; then
+if [ "$USE_DOCKER" = "1" ]; then
     # Use tar, so that files are created with the correct owner on the host
     docker exec -u $TUSER gitian-target tar -C `dirname "$1"` -cf - `basename "$1"` | tar -C "$2" -xf -
-elif [ "$USE_LXC" -eq 1 ]; then
+elif [ "$USE_LXC" = "1" ]; then
     config-lxc
     sudo $LXC_EXECUTE -n gitian -f var/lxc.config -- sudo -i -u $TUSER tar -C `dirname "$1"` -cf - `basename "$1"` | tar -C "$2" -xf -
 else

@@ -1,5 +1,5 @@
 VM_SSH_PORT=2223
-if [ "$USE_LXC" -eq 1 ]; then
+if [ "$USE_LXC" = "1" ]; then
   if [ -z "$LXC_EXECUTE" ]; then
     ver=`lxc-start --version`
     if dpkg --compare-versions $ver ge 1.0.0 ; then

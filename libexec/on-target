@@ -46,9 +46,9 @@ fi
 #  exit 1
 #fi
 
-if [ "$USE_DOCKER" -eq 1 ]; then
+if [ "$USE_DOCKER" = "1" ]; then
     docker exec -u $TUSER -i gitian-target $*
-elif [ "$USE_LXC" -eq 1 ]; then
+elif [ "$USE_LXC" = "1" ]; then
     config-lxc
     sudo $LXC_EXECUTE -n gitian -f var/lxc.config -- sudo -u $TUSER $ENV -i -- $*
 else
