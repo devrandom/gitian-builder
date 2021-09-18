@@ -12,4 +12,8 @@ if [ -z "$MIRROR_HOST" ] || [ "$MIRROR_HOST" == "127.0.0.1" ]; then
   MIRROR_HOST=$GITIAN_HOST_IP
 fi
 
-sed "s;HOSTIP;$MIRROR_HOST;g" < target-bin/bootstrap-fixup.in > target-bin/bootstrap-fixup
+if [ $APT_CACHER = "1" ]; then
+    sed "s;HOSTIP;$MIRROR_HOST;g" < target-bin/bootstrap-fixup.in > target-bin/bootstrap-fixup
+else
+    sed "s;HOSTIP:3142/;;g" < target-bin/bootstrap-fixup.in > target-bin/bootstrap-fixup
+fi
