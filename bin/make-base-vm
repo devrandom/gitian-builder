@@ -201,7 +201,7 @@ if [ $DOCKER = "1" ]; then
 
   apt_cacher=""
   if [ "$APT_CACHER" = 1 ]; then
-    apt_cacher="RUN echo 'Acquire::http { Proxy "$MIRROR_BASE"; };' > /etc/apt/apt.conf.d/50cacher"
+    apt_cacher="RUN echo 'Acquire::http { Proxy \"$MIRROR_BASE\"; };' > /etc/apt/apt.conf.d/50cacher"
   fi
 
   # Generate the dockerfile
