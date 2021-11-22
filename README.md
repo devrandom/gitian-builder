@@ -1,3 +1,7 @@
+# MAINTENANCE MODE
+
+Due to the move of Bitcoin Core to [Guix](https://github.com/bitcoin/bitcoin/blob/master/doc/release-process.md#building), this repository is switching to maintenance mode.  Only serious bugs (including security issues) will be considered going forward.
+
 # Gitian
 
 Read about the project goals at the [project home page](https://gitian.org/).
