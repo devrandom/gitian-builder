@@ -53,7 +53,7 @@ OUT=target-$SUITE-$ARCH
 
 case $VMSW in
   KVM)
-    qemu-img create -f qcow2 -o backing_file="$BASE.qcow2" "$OUT.qcow2"
+    qemu-img create -f qcow2 -o backing_fmt=qcow2,backing_file="$BASE.qcow2" "$OUT.qcow2"
     ;;
   LXC)
     cp -a $BASE $OUT
