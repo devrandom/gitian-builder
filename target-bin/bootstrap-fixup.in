@@ -4,6 +4,7 @@ set -e
 
 DISTRIB_NAME=`lsb_release -is`
 DISTRIB_CODENAME=`lsb_release -cs`
+DISTRIB_NUMBER=`lsb_release -rs`
 
 if [ $DISTRIB_NAME = "Ubuntu" ]; then
   echo "deb http://HOSTIP:3142/archive.ubuntu.com/ubuntu $DISTRIB_CODENAME main universe" > $1/etc/apt/sources.list
@@ -11,7 +12,15 @@ if [ $DISTRIB_NAME = "Ubuntu" ]; then
   echo "deb http://HOSTIP:3142/archive.ubuntu.com/ubuntu $DISTRIB_CODENAME-updates main universe" >> $1/etc/apt/sources.list
 elif [ $DISTRIB_NAME = "Debian" ]; then
   echo "deb http://HOSTIP:3142/ftp.debian.org/debian $DISTRIB_CODENAME main" > $1/etc/apt/sources.list
-  echo "deb http://HOSTIP:3142/security.debian.org/ $DISTRIB_CODENAME/updates main" >> $1/etc/apt/sources.list
+
+  # This line format changed with the release of Debian 11 Buster
+  # https://wiki.debian.org/NewInBullseye
+  if [ $DISTRIB_NUMBER -ge 11 ]; then
+    echo "deb http://HOSTIP:3142/security.debian.org/debian-security $DISTRIB_CODENAME-security main" >> $1/etc/apt/sources.list
+  else
+    echo "deb http://HOSTIP:3142/security.debian.org/ $DISTRIB_CODENAME/updates main" >> $1/etc/apt/sources.list
+  fi
+
   echo "deb http://HOSTIP:3142/ftp.debian.org/debian $DISTRIB_CODENAME-updates main" >> $1/etc/apt/sources.list
   # grub-legacy conflicts grub-pc dependencies
   # No grub-legacy on Ubuntu, just on Debian
