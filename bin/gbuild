@@ -320,11 +320,11 @@ build_desc["remotes"].each do |remote|
     system!("git init inputs/#{dir}")
   end
   if !@options[:skip_fetch]
-    system!("cd inputs/#{dir} && git fetch -f --update-head-ok #{sanitize_path(remote["url"], remote["url"])} #{commit}:refs/tags/tobuild")
-    system!("cd inputs/#{dir} && git checkout -q tobuild")
+    system!("cd inputs/#{dir} && git fetch -f --update-head-ok #{sanitize_path(remote["url"], remote["url"])} #{commit}:refs/tags/#{commit}")
+    system!("cd inputs/#{dir} && git checkout -q refs/tags/#{commit}")
     system!("cd inputs/#{dir} && git submodule update --init --recursive --force")
   end
-  commit = `cd inputs/#{dir} && git log --format=%H -1 tobuild`.strip
+  commit = `cd inputs/#{dir} && git log --format=%H -1 refs/tags/#{commit}`.strip
   raise "error looking up commit for tag #{remote["commit"]}" unless $?.exitstatus == 0
   in_sums << "git:#{commit} #{dir}"
 end
