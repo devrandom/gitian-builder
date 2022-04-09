@@ -223,6 +223,12 @@ OptionParser.new do |opts|
   opts.on("--skip-fetch", "skip fetching the latest git objects and refs from the remote source") do |v|
     @options[:skip_fetch] = v
   end
+  opts.on("--fetch-branches", "fetch branches from the remote source") do |v|
+    @options[:fetch_branches] = v
+  end
+  opts.on("--fetch-tags", "fetch tags from the remote source") do |v|
+    @options[:fetch_tags] = v
+  end
   opts.on("--skip-cleanup", "skip cleaning up the target VM. this may be useful for copying additional files from the target after the build") do |v|
     @options[:skip_cleanup] = v
   end
@@ -320,12 +326,19 @@ build_desc["remotes"].each do |remote|
     system!("git init inputs/#{dir}")
   end
   if !@options[:skip_fetch]
-    system!("cd inputs/#{dir} && git fetch -f --update-head-ok #{sanitize_path(remote["url"], remote["url"])} #{commit}:refs/tags/tobuild")
-    system!("cd inputs/#{dir} && git checkout -q tobuild")
-    system!("cd inputs/#{dir} && git submodule update --init --recursive --force")
+    if @options[:fetch_branches]
+      system!("cd inputs/#{dir} && git fetch -f --update-head-ok #{sanitize_path(remote["url"], remote["url"])} +refs/heads/*:refs/heads/*")
+    end
+    if @options[:fetch_tags]
+      system!("cd inputs/#{dir} && git fetch -f --update-head-ok #{sanitize_path(remote["url"], remote["url"])} +refs/tags/*:refs/tags/*")
+    end
+    system!("cd inputs/#{dir} && git fetch -f --update-head-ok #{sanitize_path(remote["url"], remote["url"])} #{commit}")
+    system!("cd inputs/#{dir} && git checkout -q FETCH_HEAD")
+  else
+    system!("cd inputs/#{dir} && git checkout -q #{commit}")
   end
-  commit = `cd inputs/#{dir} && git log --format=%H -1 tobuild`.strip
-  raise "error looking up commit for tag #{remote["commit"]}" unless $?.exitstatus == 0
+  system!("cd inputs/#{dir} && git submodule update --init --recursive --force")
+  commit = `cd inputs/#{dir} && git log --format=%H -1`.strip
   in_sums << "git:#{commit} #{dir}"
 end
 
