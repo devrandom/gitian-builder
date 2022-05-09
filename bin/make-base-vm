@@ -111,7 +111,7 @@ fi
 MIRROR_BASE=http://${MIRROR_HOST:-$MIRROR_DEFAULT}:3142
 
 if [ $DISTRO = "ubuntu" ]; then
-  MIRROR=$MIRROR_BASE/old-releases.ubuntu.com/ubuntu
+  MIRROR=$MIRROR_BASE/archive.ubuntu.com/ubuntu
   SECURITY_MIRROR=$MIRROR_BASE/security.ubuntu.com/ubuntu
   components=main,universe
 elif [ $DISTRO = "debian" ]; then
