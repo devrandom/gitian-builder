@@ -79,7 +79,7 @@ program = @options[:program] || "gpg"
 
 release_path = File.join(destination, release)
 
-File.exists?(release_path) or raise "#{release_path} does not exist"
+File.exist?(release_path) or raise "#{release_path} does not exist"
 
 result_file = "#{package_name}-build.assert"
 sig_file = "#{result_file}.sig"
