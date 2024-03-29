@@ -329,10 +329,16 @@ build_desc["remotes"].each do |remote|
     if @options[:fetch_branches]
       system!("cd inputs/#{dir} && git fetch -f --update-head-ok #{sanitize_path(remote["url"], remote["url"])} +refs/heads/*:refs/heads/*")
     end
+    commit_fetch = commit
     if @options[:fetch_tags]
       system!("cd inputs/#{dir} && git fetch -f --update-head-ok #{sanitize_path(remote["url"], remote["url"])} +refs/tags/*:refs/tags/*")
+    else
+      refinfo = `cd inputs/#{dir} && git ls-remote #{sanitize_path(remote["url"], remote["url"])} #{commit}`
+      if refinfo.include? "\trefs/tags/"
+        commit_fetch = "tag " + commit
+      end
     end
-    system!("cd inputs/#{dir} && git fetch -f --update-head-ok #{sanitize_path(remote["url"], remote["url"])} #{commit}")
+    system!("cd inputs/#{dir} && git fetch -f --no-tags --update-head-ok #{sanitize_path(remote["url"], remote["url"])} #{commit_fetch}")
     system!("cd inputs/#{dir} && git checkout -q FETCH_HEAD")
   else
     system!("cd inputs/#{dir} && git checkout -q #{commit}")
