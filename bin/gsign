@@ -67,7 +67,7 @@ package_name = sanitize(package_name, "package name")
 
 result_file = "#{package_name}-res.yml"
 result_path = File.join(result_dir, result_file)
-File.exists?(result_path) or raise "#{result_path} does not exist"
+File.exist?(result_path) or raise "#{result_path} does not exist"
 result = YAML.load_file(result_path)
 
 destination = @options[:destination] || File.join(base_dir, "sigs", package_name)
