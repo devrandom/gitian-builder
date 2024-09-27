@@ -113,7 +113,6 @@ Dir.foreach(release_path) do |signer_dir|
   end
 
   result = YAML.load_file(result_path)
-  system("#{program} --keyserver pgp.mit.edu --recv-keys `#{program} --quiet --batch --verify \"#{File.join(signer_path, 'signature.pgp')}\" \"#{result_path}\" 2>&1 | head -n1 | grep \"key ID\" | awk '{ print $15 }'` > /dev/null 2>&1")
   out = `#{program} --quiet --batch --verify \"#{sig_path}\" \"#{result_path}\" 2>&1`
   if $? != 0
     out.each_line do |line|
