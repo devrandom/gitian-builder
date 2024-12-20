@@ -163,8 +163,10 @@ EOF"
     build_desc["remotes"].each do |remote|
       dir = sanitize(remote["dir"], remote["dir"])
 
-      author_date = `cd inputs/#{dir} && TZ=UTC git log --date='format-local:%F %T' --format="%ad" -1`.strip
-      raise "error looking up author date in #{dir}" unless $?.exitstatus == 0
+      Dir.chdir("inputs/#{dir}") do
+        author_date = `TZ=UTC git log --date='format-local:%F %T' --format="%ad" -1`.strip
+        raise "error looking up author date in #{dir}" unless $?.exitstatus == 0
+      end
 
       system! "copy-to-target #{@quiet_flag} inputs/#{dir} build/"
       script.puts "(cd build/#{dir} && git reset -q --hard && git clean -q -f -d)"
@@ -291,7 +293,9 @@ in_sums << desc_sum
 
 build_desc["files"].each do |filename|
   filename = sanitize(filename, "files section")
-  in_sums << `cd inputs && sha256sum #{filename}`
+  Dir.chdir("inputs") do
+    in_sums << `sha256sum #{filename}`
+  end
 end
 
 commits = {}
@@ -333,9 +337,11 @@ build_desc["remotes"].each do |remote|
     if @options[:fetch_tags]
       system!("cd inputs/#{dir} && git fetch -f --update-head-ok #{sanitize_path(remote["url"], remote["url"])} +refs/tags/*:refs/tags/*")
     else
-      refinfo = `cd inputs/#{dir} && git ls-remote #{sanitize_path(remote["url"], remote["url"])} #{commit}`
-      if refinfo.include? "\trefs/tags/"
-        commit_fetch = "tag " + commit
+      Dir.chdir("inputs/#{dir}") do
+        refinfo = `git ls-remote #{sanitize_path(remote["url"], remote["url"])} #{commit}`
+        if refinfo.include? "\trefs/tags/"
+          commit_fetch = "tag " + commit
+        end
       end
     end
     system!("cd inputs/#{dir} && git fetch -f --no-tags --update-head-ok #{sanitize_path(remote["url"], remote["url"])} #{commit_fetch}")
@@ -344,7 +350,9 @@ build_desc["remotes"].each do |remote|
     system!("cd inputs/#{dir} && git checkout -q #{commit}")
   end
   system!("cd inputs/#{dir} && git submodule update --init --recursive --force")
-  commit = `cd inputs/#{dir} && git log --format=%H -1`.strip
+  Dir.chdir("inputs/#{dir}") do
+    commit = `git log --format=%H -1`.strip
+  end
   in_sums << "git:#{commit} #{dir}"
 end
 
@@ -389,7 +397,9 @@ Dir.glob(File.join(out_dir, '**', '*'), File::FNM_DOTMATCH).sort.each do |file_i
   next if File.directory?(file_in_out)
   file = file_in_out.sub(out_dir + File::SEPARATOR, '')
   file = sanitize_path(file, file_in_out)
-  out_sums[file] = `cd #{out_dir} && sha256sum #{file}`
+  Dir.chdir(out_dir) do
+    out_sums[file] = `sha256sum #{file}`
+  end
   raise "failed to sum #{file}" unless $? == 0
   puts out_sums[file] unless @options[:quiet]
 end
@@ -399,7 +409,9 @@ if enable_cache
     next if File.directory?(file_in_out)
     file = file_in_out.sub(cache_common_dir + File::SEPARATOR, '')
     file = sanitize_path(file, file_in_out)
-    cache_common_sums[file] = `cd #{cache_common_dir} && sha256sum #{file}`
+    Dir.chdir(cache_common_dir) do
+      cache_common_sums[file] = `sha256sum #{file}`
+    end
     raise "failed to sum #{file}" unless $? == 0
   end
 
@@ -407,7 +419,9 @@ if enable_cache
     next if File.directory?(file_in_out)
     file = file_in_out.sub(cache_package_dir + File::SEPARATOR, '')
     file = sanitize_path(file, file_in_out)
-    cache_package_sums[file] = `cd #{cache_package_dir} && sha256sum #{file}`
+    Dir.chdir(cache_package_dir) do
+      cache_package_sums[file] = `sha256sum #{file}`
+    end
     raise "failed to sum #{file}" unless $? == 0
   end
 end
