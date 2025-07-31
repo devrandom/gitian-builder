@@ -193,12 +193,21 @@ if [ $DOCKER = "1" ]; then
     base_image="$DISTRO:$SUITE"
   fi
 
+  if [ $(uname) != "Darwin" ]; then
+    CACHELINE=$(cat << EOF0
+RUN echo 'Acquire::http { Proxy "$MIRROR_BASE"; };' > /etc/apt/apt.conf.d/50cacher
+EOF0
+)
+  else
+    # MacOS, no local debian cache
+    CACHELINE=""
+  fi
   # Generate the dockerfile
   cat << EOF > $OUT.Dockerfile
 FROM $base_image
 
 ENV DEBIAN_FRONTEND=noninteractive
-RUN echo 'Acquire::http { Proxy "$MIRROR_BASE"; };' > /etc/apt/apt.conf.d/50cacher
+$CACHELINE
 RUN apt-get update && apt-get --no-install-recommends -y install $addpkg
 
 RUN useradd -ms /bin/bash -U $DISTRO
